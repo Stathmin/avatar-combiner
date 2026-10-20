@@ -102,6 +102,8 @@ TEXTS = {
         'dg': 'dG',
         'fold_label': 'fold',
         'error': 'Error',
+        'hero_kicker': 'LOCAL GENETICS WORKBENCH',
+        'hero_sub': 'Pick the workbook, confirm four sheets, run. Every result keeps a manifest.',
     },
     'ru': {
         'pipeline': 'Пайплайн',
@@ -168,12 +170,133 @@ TEXTS = {
         'dg': 'dG',
         'fold_label': 'складка',
         'error': 'Ошибка',
+        'hero_kicker': 'ЛОКАЛЬНАЯ ГЕНЕТИЧЕСКАЯ ЛАБОРАТОРИЯ',
+        'hero_sub': 'Выберите файл, проверьте четыре листа, запустите. Каждый результат хранит manifest.',
     },
 }
 
 
 def tr(key):
     return TEXTS[LANG['code']].get(key, key)
+
+
+THEME_CSS = """
+:root {
+  --paper: #f6efe3;
+  --paper-2: #fffaf2;
+  --ink: #2b2019;
+  --muted: #77685a;
+  --line: #e3d3bf;
+  --rust: #a64b2a;
+  --amber: #d08a2f;
+  --olive: #5f6f46;
+  --cocoa: #241a13;
+}
+html { color-scheme: light; }
+body {
+  background:
+    radial-gradient(1100px 600px at 8% -10%, #f2d7b3 0%, transparent 55%),
+    radial-gradient(900px 520px at 100% 0%, #ecd0ad 0%, transparent 52%),
+    var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  opacity: .5;
+  background-image: radial-gradient(rgba(43, 32, 25, .035) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+.q-layout, .q-page-container, .q-page { background: transparent !important; }
+.q-page { max-width: 1120px; margin: 0 auto; padding: 30px 24px 72px; }
+.app-header {
+  background: rgba(246, 239, 227, .82) !important;
+  backdrop-filter: blur(16px) saturate(1.1);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+.app-header .q-btn { color: var(--ink) !important; }
+.app-drawer {
+  background: linear-gradient(180deg, #fdf7ec 0%, #f2e3cf 100%) !important;
+  border-right: 1px solid var(--line);
+}
+.brand {
+  font-size: 11px; font-weight: 700; letter-spacing: .22em;
+  color: var(--muted); text-transform: uppercase;
+}
+.nav-link {
+  display: block; border-radius: 10px; padding: 7px 10px !important;
+  color: var(--ink) !important; text-decoration: none !important;
+  transition: background .16s ease, transform .16s ease;
+}
+.nav-link:hover { background: #efdfc9; transform: translateX(2px); }
+.nav-link.nav-active {
+  background: linear-gradient(90deg, #f0d9b8, #f7e9d4);
+  font-weight: 650; box-shadow: inset 3px 0 0 var(--rust);
+}
+.panel {
+  background: linear-gradient(180deg, rgba(255, 251, 244, .97), rgba(255, 247, 236, .92)) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 46px -28px rgba(82, 48, 22, .45) !important;
+  padding: 18px 20px;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.panel:hover { transform: translateY(-1px); box-shadow: 0 26px 54px -30px rgba(82, 48, 22, .5) !important; }
+.hero { gap: 2px; padding: 6px 2px 18px; }
+.hero-kicker {
+  font-size: 11px; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--rust); font-weight: 700;
+}
+.hero-title {
+  font-size: clamp(34px, 5vw, 54px); line-height: 1; letter-spacing: -.035em;
+  font-weight: 800;
+  background: linear-gradient(100deg, var(--rust), var(--amber) 60%, var(--olive));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-sub { color: var(--muted); max-width: 62ch; font-size: 14px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 10px; font-size: 11px; color: var(--muted);
+  background: rgba(255, 250, 242, .7);
+}
+.q-card { border-radius: 18px; }
+.q-card .text-lg { letter-spacing: -.01em; }
+.q-btn { text-transform: none !important; border-radius: 11px !important; letter-spacing: .01em; }
+.q-btn--flat { border-radius: 9px !important; }
+.q-field--outlined .q-field__control {
+  background: var(--paper-2); border-radius: 12px;
+}
+.q-field--outlined .q-field__control:before { border-color: var(--line); }
+.q-field--outlined.q-field--focused .q-field__control:after { border-color: var(--rust); }
+.q-field__label { color: var(--muted) !important; }
+.q-tab { text-transform: none !important; letter-spacing: .01em; }
+.q-tab--active { color: var(--rust) !important; }
+.q-tab__indicator { background: linear-gradient(90deg, var(--rust), var(--amber)) !important; }
+.log-panel {
+  background: var(--cocoa) !important; color: #f3e2c8 !important;
+  border-radius: 14px !important; border: 1px solid #3a2a20;
+  padding: 12px 14px !important; font-size: 12px;
+}
+.tool-index { gap: 6px; }
+.tool-index .q-btn {
+  border: 1px solid var(--line); background: rgba(255, 250, 242, .75);
+  color: var(--ink) !important;
+}
+.tool-index .q-btn:hover { border-color: var(--amber); background: #f7e7cf; }
+.footer-note { color: var(--muted); font-size: 12px; }
+.q-notification { border-radius: 12px !important; }
+::selection { background: #f0c98f; color: var(--cocoa); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d8c3a6; border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+"""
 
 
 def change_language(code):
@@ -224,16 +347,31 @@ def build_app(base_dir):
     state = State(base_dir)
 
     def shell(title, active):
-        with ui.left_drawer(value=True, bordered=True).classes('bg-grey-2') as drawer:
-            ui.label('AVATAR COMBINER').classes('text-sm font-bold mt-2')
-            ui.link(tr('pipeline'), '/').classes('text-black no-underline')
-            ui.link(tr('results'), '/results').classes('text-black no-underline')
+        ui.colors(
+            primary='#a64b2a',
+            secondary='#5f6f46',
+            accent='#d08a2f',
+            positive='#5f6f46',
+            negative='#a64b2a',
+            warning='#d08a2f',
+            info='#6d7f8a',
+        )
+        ui.add_head_html(f'<style>{THEME_CSS}</style>', shared=True)
+
+        with ui.left_drawer(value=True, bordered=True).classes('app-drawer') as drawer:
+            ui.label('AVATAR COMBINER').classes('brand mt-2')
+            ui.link(tr('pipeline'), '/').classes(
+                'nav-link' + (' nav-active' if active == 'pipeline' else '')
+            )
+            ui.link(tr('results'), '/results').classes(
+                'nav-link' + (' nav-active' if active == 'results' else '')
+            )
             ui.separator()
             ui.label(tr('genetics_tools')).classes('text-xs opacity-60')
             for key, label_key in TOOLS:
-                classes = 'text-black no-underline'
+                classes = 'nav-link'
                 if active == key:
-                    classes += ' font-bold'
+                    classes += ' nav-active'
                 ui.link(tr(label_key), f'/tools?tool={key}').classes(classes)
             ui.separator()
             with ui.row().classes('items-center gap-1'):
@@ -247,11 +385,13 @@ def build_app(base_dir):
                     on_click=lambda: change_language('ru'),
                 ).props('flat dense')
 
-        with ui.header().classes('items-center'):
+        with ui.header().classes('app-header items-center'):
             ui.button(icon='menu', on_click=lambda: drawer.toggle()).props(
                 'flat color=white'
             )
             ui.label(title).classes('text-xl font-bold')
+            ui.space()
+            ui.label('autumn 2026 · local').classes('badge')
 
     def drain_logs(element):
         while state.logs:
@@ -283,6 +423,10 @@ def build_app(base_dir):
     def index():
         ui.page_title('Avatar Combiner')
         shell(tr('pipeline'), 'pipeline')
+        with ui.column().classes('hero'):
+            ui.label(tr('hero_kicker')).classes('hero-kicker')
+            ui.label('4 × 96  →  1 × 384').classes('hero-title')
+            ui.label(tr('hero_sub')).classes('hero-sub')
 
         if state.error:
             ui.label(state.error).classes('text-red-600')
@@ -293,7 +437,7 @@ def build_app(base_dir):
         if current not in options:
             current = None
 
-        with ui.card().classes('w-full'):
+        with ui.card().classes('w-full panel'):
             ui.label(tr('workbook')).classes('text-lg font-bold')
             workbook_select = ui.select(
                 options,
@@ -306,7 +450,7 @@ def build_app(base_dir):
                 max_file_size=50_000_000,
             )
 
-        with ui.card().classes('w-full'):
+        with ui.card().classes('w-full panel'):
             ui.label(tr('sheets')).classes('text-lg font-bold')
             sheet_row = ui.row().classes('w-full')
 
@@ -315,7 +459,7 @@ def build_app(base_dir):
             value='B3:M10',
         ).classes('w-60')
 
-        log = ui.log(max_lines=1000).classes('w-full h-64 font-mono text-xs')
+        log = ui.log(max_lines=1000).classes('w-full h-64 font-mono text-xs log-panel')
         result_box = ui.column().classes('w-full')
         ui.timer(0.3, lambda: drain_logs(log))
 
@@ -416,7 +560,7 @@ def build_app(base_dir):
                 state.running = False
                 button.props(remove='loading')
 
-        button = ui.button(tr('run'), on_click=run_now).props('color=primary')
+        button = ui.button(tr('run'), on_click=run_now).props('color=primary size=lg')
         load_sheets()
 
     @ui.page('/results')
@@ -438,7 +582,7 @@ def build_app(base_dir):
             return
 
         for folder in folders:
-            with ui.card().classes('w-full'):
+            with ui.card().classes('w-full panel'):
                 render_result(folder, ui.column().classes('w-full'))
 
     @ui.page('/tools')
@@ -480,7 +624,7 @@ def build_app(base_dir):
         }
 
         ui.label(tr('all_tools')).classes('text-lg font-bold mt-2')
-        with ui.row().classes('flex-wrap gap-1'):
+        with ui.row().classes('flex-wrap tool-index'):
             index = (
                 ('primer_tm', tm_tab),
                 ('primer_pair', pair_tab),
@@ -722,5 +866,5 @@ def main(base_dir=None, port=8080, show=True):
         favicon='◈',
         reload=False,
         show=show,
-        dark=None,
+        dark=False,
     )
