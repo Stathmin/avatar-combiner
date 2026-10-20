@@ -30,7 +30,10 @@ def check_pyinstaller():
 
 def check_dependencies():
     """Проверяет runtime-зависимости."""
-    print("✓ Runtime: Bio.Seq, Pint, Primer3-py")
+    print(
+        '✓ Runtime: Bio.Seq/SeqIO, Pint, Primer3-py, seqfold, snapgene_reader, '
+        'pydna, wellmap, pandas, openpyxl'
+    )
     return True
 
 
@@ -111,7 +114,6 @@ def build_binary():
         '--exclude-module', 'multiprocessing',
         '--exclude-module', 'http',
         '--exclude-module', 'ssl',
-        '--exclude-module', 'socket',
         '--exclude-module', 'xmlrpc',
         '--exclude-module', 'pydoc',
         '--exclude-module', 'pdb',
@@ -119,33 +121,6 @@ def build_binary():
         '--exclude-module', 'wsgiref',
         '--exclude-module', 'webbrowser',
         '--exclude-module', 'xml.dom',
-        # Biopython: only Bio.Seq and IUPACData are used
-        '--exclude-module', 'Bio.Align',
-        '--exclude-module', 'Bio.AlignIO',
-        '--exclude-module', 'Bio.PDB',
-        '--exclude-module', 'Bio.Nexus',
-        '--exclude-module', 'Bio.GenBank',
-        '--exclude-module', 'Bio.bgzf',
-        '--exclude-module', 'Bio.File',
-        '--exclude-module', 'Bio.SeqUtils',
-        '--exclude-module', 'Bio.Phylo',
-        '--exclude-module', 'Bio.Blast',
-        '--exclude-module', 'Bio.Entrez',
-        '--exclude-module', 'Bio.ExPASy',
-        '--exclude-module', 'Bio.KEGG',
-        '--exclude-module', 'Bio.Medline',
-        '--exclude-module', 'Bio.PopGen',
-        '--exclude-module', 'Bio.SCOP',
-        '--exclude-module', 'Bio.SwissProt',
-        '--exclude-module', 'Bio.TogoWS',
-        '--exclude-module', 'Bio.UniGene',
-        '--exclude-module', 'Bio.UniProt',
-        '--exclude-module', 'Bio.codonalign',
-        '--exclude-module', 'Bio.motifs',
-        '--exclude-module', 'Bio.pairwise2',
-        '--exclude-module', 'Bio.phenotype',
-        '--exclude-module', 'Bio.SearchIO',
-        '--exclude-module', 'BioSQL',
         script_name
     ]
 

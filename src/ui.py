@@ -284,7 +284,7 @@ HELP = {
         ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, import GenBank, SnapGene and FASTA files, and export results to XLSX.'),
         ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
-        ('Size', 'Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas and openpyxl. Only pandas tests are excluded from the bundle.'),
+        ('Size', 'Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas and openpyxl. The bundle still excludes tests and optional modules; matplotlib is included because wellmap imports it.'),
     ],
     'ru': [
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
@@ -293,7 +293,7 @@ HELP = {
         ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, импорт GenBank, SnapGene и FASTA, экспорт результатов в XLSX.'),
         ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
-        ('Размер', 'Рантайм: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas и openpyxl. В сборке исключены только тесты pandas.'),
+        ('Размер', 'Рантайм: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas и openpyxl. В сборке по-прежнему исключены тесты и необязательные модули; matplotlib включён, потому что его импортирует wellmap.'),
     ],
 }
 

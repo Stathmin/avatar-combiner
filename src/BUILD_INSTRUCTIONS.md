@@ -37,9 +37,11 @@ uv run pyinstaller --onefile --optimize 2 \
 
 Для Linux используйте имя без `.exe`, например `avatar_combiner`.
 
-`build_binary.py` дополнительно исключает `numpy`, `pandas`, `matplotlib`, `PIL`,
-`tkinter`, `setuptools` и тестовые пакеты. Библиотеки инструментов: `Bio.Seq`,
-`Pint` и `Primer3-py`. `NumPy` намеренно не включается в сборку.
+`build_binary.py` исключает тесты `pandas`, `tkinter`, `setuptools` и часть
+необязательных модулей. `matplotlib` входит в сборку, потому что его
+импортирует `wellmap`. Библиотеки инструментов: `Bio.Seq`/`SeqIO`, `Pint`,
+`Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas` и
+`openpyxl`.
 
 Если в системе есть `upx`, скрипт автоматически включает сжатие. UPX может вызывать
 ложные срабатывания антивируса, поэтому это опция, а не требование.
