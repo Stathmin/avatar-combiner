@@ -12,7 +12,7 @@ from typing import Optional
 
 import seqfold
 
-from tools import normalize_primer
+from tools import ToolError, normalize_primer
 
 
 @dataclass(frozen=True)
@@ -33,17 +33,27 @@ class StructureReport:
 def analyze_structure(sequence):
     """Return dG, Tm, dot-bracket and folding hits for an ACGT oligo."""
     sequence = normalize_primer(sequence)
-    folded = seqfold.fold(sequence)
-    return StructureReport(
-        sequence=sequence,
-        dg=_finite(seqfold.dg(sequence)),
-        tm=_finite(seqfold.tm(sequence)),
-        dot_bracket=_safe_dot(sequence, seqfold.dot_bracket(sequence, folded)),
-        hits=tuple(
+    try:
+        folded = seqfold.fold(sequence)
+        hits = tuple(
             StructureHit(energy=float(hit.e), description=str(hit.desc))
             for hit in folded
             if math.isfinite(float(hit.e))
-        ),
+        )
+        dg = _finite(seqfold.dg(sequence))
+        tm = _finite(seqfold.tm(sequence))
+        dot_bracket = _safe_dot(sequence, seqfold.dot_bracket(sequence, folded))
+    except Exception as exc:
+        raise ToolError(f'cannot fold sequence: {exc}') from exc
+
+    return StructureReport(
+        sequence=sequence,
+        dg=dg,
+        # Without a finite fold hit there is no structure, so a Tm (often a
+        # seqfold artefact such as -40.6 for ATGC) would be misleading.
+        tm=tm if hits else None,
+        dot_bracket=dot_bracket,
+        hits=hits,
     )
 
 
@@ -53,7 +63,7 @@ def _finite(value) -> Optional[float]:
 
 
 def _safe_dot(sequence, dot):
-    if len(dot) != len(sequence):
+    if len(dot) != len(sequence) or set(dot) - set('().'):
         return '.' * len(sequence)
 
     depth = 0
