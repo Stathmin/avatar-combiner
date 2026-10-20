@@ -302,7 +302,40 @@ DNA, units, structure), then import/layout/PCR/XLSX.
 - UI integration tests: `tests/test_web_ui.py` (NiceGUI user simulation,
   including real Tm and Units clicks), `tests/test_ui.py` (TUI render/navigation)
 
-## 8. Limitations
+## 9. Remediation status
+
+Implemented in `0641470`. The original analysis above is pinned to `ad63047`;
+this table is the current state.
+
+| ID | Status | What changed |
+|---|---|---|
+| F1 | **Open** | Tool/config presentation is still duplicated. Needs the shared `tool_service` + presenter layer from §6. |
+| F2 | **Fixed** | Web config and language live in `app.storage.user` (per client); run logs are per page. `state.running` stays a single global pipeline lock by design. |
+| F3 | **Fixed** | `run_pipeline.run` validates the workbook, sheets and range before `create_result_dir`. A missing workbook raises `PipelineError` and creates no folder. Regression tests pin it. |
+| F4 | **Fixed** | `app_config.validate_config` checks workbook, four unique sheets, range bounds and label rows; both JSON and auto configs go through it. |
+| F5 | **Fixed** | Custom `xlsx_reader.py` (208 lines) deleted. Input and export both use openpyxl, imported lazily so TUI startup stays light. |
+| F6 | **Open** | `TEXT` and `TEXTS` are still separate dictionaries. Needs the shared i18n module from §6. |
+| F7 | **Fixed** | `update_sheets`, `config_source`, `sheets_hint`, `range_hint` and `ids` removed. The two standalone scripts remain as utilities; neither is imported or bundled. |
+| F8 | **Partial** | Major bounds added (`wellmap<4`, `nicegui<4`, `pydna<6`, etc.). The hand-written PyInstaller hidden-import list remains. |
+| F9 | **Partial** | The pipeline now raises `PipelineError`/`ConfigError`; the extractor no longer calls `sys.exit`. UI-level broad catches remain as the top-level error boundary. |
+| F10 | **Fixed** | Uploads must be `.xlsx`/`.xlsm`; 50 MB cap; files older than 7 days are pruned at startup. |
+| F11 | **Fixed** | `run()` raises instead of exiting; `main()` maps `PipelineError` to exit code 1; extractor raises `FileNotFoundError`/`ValueError`. |
+| F12 | **Fixed** | `read_config` removed from both `run_pipeline` and the extractor; `app_config.load_config` is the only loader. |
+
+### Verification after remediation
+
+- `uv run pytest -q` → **80 passed**
+- `uv run ruff check src tests` → clean
+- Frozen run with workbook → exit 0, 8 result files + `manifest.json`
+- Frozen run with workbook removed → exit 1, **no** result folder
+- Frozen web → `/`, `/tools?tool=units`, `/results` all 200
+- Bundle: 62 MB
+
+**Still open:** F1 (duplicated tool/config presentation) and F6 (duplicated
+i18n). Both are architectural and should land as separate PRs from §6; they do
+not affect current correctness.
+
+## 10. Limitations
 
 - Static analysis only; no runtime profiling, no mutation testing.
 - Line numbers are pinned to `ad63047`.
