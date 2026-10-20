@@ -177,6 +177,7 @@ TEXT = {
         'excel_hint': 'Path to .xlsx or .xlsm',
         'sheets_hint': 'Four names, comma-separated',
         'range_hint': 'Example: B3:M10',
+        'bad_selection': 'choose a number from the list',
         'files': 'files',
         'folder': 'Folder',
         'run_result': 'Result',
@@ -278,6 +279,7 @@ TEXT = {
         'excel_hint': 'Путь к .xlsx или .xlsm',
         'sheets_hint': 'Четыре имени через запятую',
         'range_hint': 'Пример: B3:M10',
+        'bad_selection': 'выберите номер из списка',
         'files': 'файлов',
         'folder': 'Папка',
         'run_result': 'Результат',
@@ -1511,9 +1513,16 @@ class App:
         return path if path.is_absolute() else self.base_dir / path
 
     def edit_excel(self):
-        path = self.prompt_text(self.t['choose_excel'], self.t['excel_hint'])
-        if path is None:
+        candidates = app_config.discover_excel(self.base_dir)
+        hint = ', '.join(path.name for path in candidates) or self.t['excel_hint']
+        text = self.prompt_text(self.t['choose_excel'], hint)
+        if text is None:
             return
+
+        path = text
+        if text.isdigit() and 1 <= int(text) <= len(candidates):
+            path = candidates[int(text) - 1]
+
         try:
             config = app_config.build_config(self.base_dir, excel_file=path)
         except Exception as exc:
@@ -1533,14 +1542,25 @@ class App:
             self.notice = (str(exc), 'error')
             return
 
-        text = self.prompt_text(self.t['choose_sheets'], ', '.join(available))
+        text = self.prompt_text(
+            self.t['choose_sheets'],
+            ', '.join(f'{index} {name}' for index, name in enumerate(available, 1)),
+        )
         if text is None:
             return
-        names = [
-            name.strip()
-            for name in (text.split(',') if ',' in text else text.split())
-            if name.strip()
+        parts = [
+            part.strip()
+            for part in (text.split(',') if ',' in text else text.split())
+            if part.strip()
         ]
+        if parts and all(part.isdigit() for part in parts):
+            numbers = [int(part) for part in parts]
+            if any(number < 1 or number > len(available) for number in numbers):
+                self.notice = (self.t['bad_selection'], 'error')
+                return
+            names = [available[number - 1] for number in numbers]
+        else:
+            names = parts
         try:
             config = app_config.build_config(
                 self.base_dir,

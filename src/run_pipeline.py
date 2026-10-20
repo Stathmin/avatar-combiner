@@ -8,6 +8,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from pathlib import Path
 
 # Импортируем функции из других модулей
@@ -75,6 +76,32 @@ def read_config(config_path='config.json'):
         sys.exit(1)
 
 
+def write_manifest(result_dir, config, base_dir):
+    """Write the run configuration into the result folder."""
+    excel_file = config.get('excel_file')
+    excel_path = Path(excel_file) if excel_file else None
+    if excel_path is not None and not excel_path.is_absolute():
+        excel_path = Path(base_dir) / excel_path
+
+    manifest = {
+        'version': __version__,
+        'created_at': time.strftime('%Y-%m-%dT%H:%M:%S'),
+        'excel_file': excel_file,
+        'excel_path': str(excel_path.resolve()) if excel_path else None,
+        'sheets': config.get('sheets', {}),
+        'data_range': config.get('data_range', {}),
+        'row_labels_col': config.get('row_labels_col'),
+        'column_labels_row': config.get('column_labels_row'),
+        'metadata_row': config.get('metadata_row'),
+    }
+    output = Path(result_dir) / 'manifest.json'
+    output.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
+        encoding='utf-8',
+    )
+    return output
+
+
 def run(base_dir=None, log=print, config=None):
     """Выполняет пайплайн и пишет все результаты в новую папку «Результат N».
 
@@ -108,6 +135,7 @@ def run(base_dir=None, log=print, config=None):
     # Создаём папку результатов при каждом запуске
     result_dir = create_result_dir(base_dir)
     log(f"\nПапка результатов: {result_dir.name}")
+    write_manifest(result_dir, config, base_dir)
 
     extracted = False
 

@@ -171,6 +171,31 @@ def test_run_passes_runtime_config(tmp_path, monkeypatch):
     assert seen['config'] is app.config
 
 
+def test_edit_sheets_accepts_indices(tmp_path, monkeypatch):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: '2,1,4,3')
+
+    app.edit_sheets()
+
+    assert [item['sheet_name'] for item in app.config['sheets'].values()] == [
+        'пл2',
+        'пл1',
+        'пл4',
+        'пл3',
+    ]
+
+
+def test_edit_excel_accepts_index(tmp_path, monkeypatch):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: '1')
+
+    app.edit_excel()
+
+    assert app.config['excel_file'] == 'plates.xlsx'
+
+
 def test_footer_keeps_shortcut_items_whole(tmp_path):
     app = make_app(tmp_path, lang='en')
 

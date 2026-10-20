@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -49,6 +50,12 @@ def test_pipeline_keeps_outputs_out_of_program_root(tmp_path, run_number):
 
     ids = (result_dir / "combined_384_plate_ids.txt").read_text(encoding="utf-8").splitlines()
     assert len(ids) == 384
+
+    manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"]
+    assert len(manifest["sheets"]) == 4
+    assert manifest["excel_path"].endswith(".xlsx")
+    assert manifest["data_range"]["start_row"] == 3
 
     for name in OUTPUT_FILES:
         assert not (tmp_path / name).exists()
