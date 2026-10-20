@@ -99,28 +99,24 @@ def build_binary():
         '--collect-all', 'pydivsufsort',
         '--collect-all', 'seguid',
         '--collect-all', 'sgffp',
-        # Исключаем ненужные модули для уменьшения размера
+        # Исключаем только заведомо необязательные модули, чтобы уменьшить размер.
+        # Библиотеки stdlib, которые могут понадобиться во время работы
+        # (unittest, concurrent, http, ssl, xml.dom), не исключаем.
         '--exclude-module', 'pandas.tests',
-        '--exclude-module', 'pandas.io.clipboard',
         '--exclude-module', 'tkinter',
         '--exclude-module', 'pytest',
         '--exclude-module', 'ruff',
         '--exclude-module', 'pip',
         '--exclude-module', 'setuptools',
         '--exclude-module', 'pkg_resources',
-        '--exclude-module', 'unittest',
         '--exclude-module', 'asyncio',
-        '--exclude-module', 'concurrent',
         '--exclude-module', 'multiprocessing',
-        '--exclude-module', 'http',
-        '--exclude-module', 'ssl',
         '--exclude-module', 'xmlrpc',
         '--exclude-module', 'pydoc',
         '--exclude-module', 'pdb',
         '--exclude-module', 'doctest',
         '--exclude-module', 'wsgiref',
         '--exclude-module', 'webbrowser',
-        '--exclude-module', 'xml.dom',
         script_name
     ]
 

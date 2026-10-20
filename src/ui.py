@@ -151,6 +151,7 @@ TEXT = {
         'target_unit': 'Target unit',
         'unit_hint': 'Example: 25 uM → nM. Empty target lists all units.',
         'primer_hint': 'ACGT only. 18–25 nt recommended.',
+        'pcr_hint': 'ACGT only, up to 10 kb.',
         'dna_hint': 'ACGTN / IUPAC accepted.',
         'language': 'Language',
         'quit': 'Quit',
@@ -246,6 +247,7 @@ TEXT = {
         'target_unit': 'Целевая единица',
         'unit_hint': 'Пример: 25 uM → nM. Пустая цель — все единицы.',
         'primer_hint': 'Только ACGT. Рекомендуется 18–25 нт.',
+        'pcr_hint': 'Только ACGT, до 10 кб.',
         'dna_hint': 'Допускаются ACGTN / IUPAC.',
         'language': 'Язык',
         'quit': 'Выход',
@@ -903,7 +905,7 @@ class App:
         ]
         return pad(cells[0], column) + '  ' + (cells[1] if len(cells) > 1 else '')
 
-    def prompt_text(self, title, hint=None):
+    def prompt_text(self, title, hint=None, max_length=120):
         value = ''
         while True:
             width, height = shutil.get_terminal_size((100, 30))
@@ -934,7 +936,7 @@ class App:
                 value = ''
             elif key == 'CTRL_W':
                 value = re.sub(r'\S+\s*$', '', value)
-            elif len(key) == 1 and key.isprintable() and len(value) < 120:
+            elif len(key) == 1 and key.isprintable() and len(value) < max_length:
                 value += key
 
     def tool_line(self, label, value, upper=True):
@@ -950,7 +952,8 @@ class App:
         )
 
     def tool_sequence_lines(self, label, sequence):
-        chunks = [sequence[i:i + 60] for i in range(0, len(sequence), 60)] or ['']
+        # 40 nt + 13-column label indent fits the 56-column inner box at width 60.
+        chunks = [sequence[i:i + 40] for i in range(0, len(sequence), 40)] or ['']
         lines = [self.tool_line(label, chunks[0])]
         for chunk in chunks[1:]:
             lines.append(self.theme.paint(' ' * 13, 'dim') + chunk)
@@ -1072,7 +1075,7 @@ class App:
         dg = self.t['none'] if report.dg is None else f'{report.dg:.2f} kcal/mol'
         tm = self.t['none'] if report.tm is None else f'{report.tm:.1f} °C'
         self.tool_output = [
-            self.tool_line(self.t['sequence'], report.sequence),
+            *self.tool_sequence_lines(self.t['sequence'], report.sequence),
             self.tool_line(self.t['length'], f'{len(report.sequence)} nt'),
             self.tool_line(self.t['structure_dg'], dg),
             self.tool_line(self.t['tm'], tm),
@@ -1127,9 +1130,14 @@ class App:
 
     def tool_pcr(self):
         self.tool_output = []
+        prompts = (
+            (self.t['pcr_template'], self.t['pcr_hint'], {'max_length': 10000}),
+            (self.t['pcr_forward'], self.t['primer_hint'], {}),
+            (self.t['pcr_reverse'], self.t['primer_hint'], {}),
+        )
         values = []
-        for title in (self.t['pcr_template'], self.t['pcr_forward'], self.t['pcr_reverse']):
-            value = self.prompt_text(title, self.t['primer_hint'])
+        for title, hint, options in prompts:
+            value = self.prompt_text(title, hint, **options)
             if value is None:
                 return
             values.append(value)

@@ -174,6 +174,38 @@ def test_pcr_tool_renders_product(tmp_path, monkeypatch):
     assert '200 nt' in text
 
 
+def test_pcr_tool_allows_long_template(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    calls = []
+
+    def fake_prompt(title, hint=None, max_length=120):
+        calls.append({'title': title, 'hint': hint, 'max_length': max_length})
+        return 'ACGT'
+
+    monkeypatch.setattr(app, 'prompt_text', fake_prompt)
+    monkeypatch.setattr(
+        pcr_tools,
+        'simulate_pcr',
+        lambda *args: pcr_tools.PcrReport(200, 'ACGT', 'ACGT', 'ACGT'),
+    )
+
+    app.tool_pcr()
+
+    assert calls[0]['max_length'] >= 10000
+    assert calls[0]['hint'] == app.t['pcr_hint']
+    assert calls[1]['max_length'] == 120
+    assert calls[2]['max_length'] == 120
+
+
+def test_sequence_lines_wrap_without_truncation(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    lines = plain(app.tool_sequence_lines('SEQ', 'A' * 80)).splitlines()
+
+    assert len(lines) == 2
+    assert all(len(line) <= 53 for line in lines)
+
+
 def test_xlsx_tool_writes_workbook(tmp_path, monkeypatch):
     app = make_app(tmp_path, lang='en')
     result_dir = tmp_path / 'Результат 1'
