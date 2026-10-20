@@ -103,7 +103,6 @@ async def test_nav_lists_every_tool(user: User):
         'Units',
         'Structure',
         'PCR',
-        'Sequence files',
         'Plate layout',
         'XLSX export',
     ):
@@ -120,7 +119,6 @@ async def test_tools_page_lists_tools(user: User):
         'Units',
         'Structure',
         'PCR',
-        'Sequence files',
         'Plate layout',
         'XLSX export',
     ):

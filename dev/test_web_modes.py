@@ -77,8 +77,6 @@ def prepare_env(base: Path, seed_result: bool = False):
     make_workbook(base / 'extra.xlsx', ['u1', 'u2', 'u3', 'u4'])
     make_jumbled(base / 'jumbled.xlsx')
     (base / 'notes.docx').write_bytes(b'not a workbook')
-    (base / 'seq.fa').write_text('>seq1\nACGTACGT\n', encoding='utf-8')
-    (base / 'bad.fa').write_text('not a fasta file', encoding='utf-8')
     (base / 'plate.toml').write_text(
         '[well.A1]\nsample = "soy1"\n\n[well.B1]\nsample = "soy2"\n',
         encoding='utf-8',
@@ -345,7 +343,6 @@ TOOL_MARKERS = (
     ('units', 'Value'),
     ('structure', 'Sequence'),
     ('pcr', 'Template'),
-    ('import', 'GenBank'),
     ('layout', 'Wellmap layout'),
     ('xlsx', 'Export XLSX'),
 )
@@ -469,17 +466,6 @@ def test_tool_pair_warns_on_bad_primers(web, page):
     expect(tool_output(page)).to_contain_text('no stable duplex')
 
 
-def test_tool_import_fasta(web, page):
-    base, url = web
-    page.goto(url + '/tools?tool=import')
-
-    panel = visible_panel(page)
-    panel.locator('input[type=file]').nth(0).set_input_files(str(base / 'seq.fa'))
-    expect(tool_output(page)).to_contain_text('fasta')
-    expect(tool_output(page)).to_contain_text('8 nt')
-    expect(tool_output(page)).to_contain_text('seq1')
-
-
 def test_tool_layout(web, page):
     base, url = web
     page.goto(url + '/tools?tool=layout')
@@ -555,10 +541,6 @@ def test_tools_errors_are_informative(web, page):
     panel.get_by_role('button', name='Simulate').click()
     expect(tool_output(page)).to_contain_text('no PCR product')
 
-    page.goto(url + '/tools?tool=import')
-    panel = visible_panel(page)
-    panel.locator('input[type=file]').nth(0).set_input_files(str(base / 'bad.fa'))
-    expect(tool_output(page)).to_contain_text('Error:')
 
 
 def test_tabs_and_drawer_have_unique_names(web, page):
@@ -571,7 +553,7 @@ def test_tabs_and_drawer_have_unique_names(web, page):
         text.strip()
         for text in page.locator('.q-drawer a').all_inner_texts()
     ]
-    assert len(links) == len(set(links)) == 11
+    assert len(links) == len(set(links)) == 10
 
 
 def test_results_manifest_download(web_seed, page):

@@ -32,8 +32,8 @@ def check_pyinstaller():
 def check_dependencies():
     """Проверяет runtime-зависимости."""
     print(
-        '✓ Runtime: Bio.Seq/SeqIO, Pint, Primer3-py, seqfold, snapgene_reader, '
-        'pydna, wellmap, pandas, openpyxl'
+        '✓ Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, '
+        'pandas, openpyxl'
     )
     return True
 
@@ -115,9 +115,6 @@ def build_binary():
         '--collect-data', 'pint',
         '--collect-all', 'nicegui',
         '--collect-all', 'seqfold',
-        '--hidden-import', 'snapgene_reader',
-        '--hidden-import', 'xmltodict',
-        '--hidden-import', 'html2text',
         # plate_layout imports wellmap.file directly and stubs wellmap.plot,
         # so matplotlib is never loaded at runtime.
         '--hidden-import', 'wellmap.file',

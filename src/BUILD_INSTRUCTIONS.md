@@ -44,7 +44,7 @@ uv run pyinstaller --onefile --optimize 1 \
 `build_binary.py` исключает тесты `pandas`, `tkinter`, `setuptools` и часть
 необязательных модулей. `matplotlib` и `Pillow` не входят в сборку: `plate_layout`
 загружает только `wellmap.file`. Библиотеки инструментов: `Bio.Seq`/`SeqIO`,
-`Pint`, `Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas`,
+`Pint`, `Primer3-py`, `seqfold`, `pydna`, `wellmap`, `pandas`,
 `openpyxl` и `NiceGUI` для веб-интерфейса.
 
 Веб-интерфейс включается флагом `--web` (по умолчанию `http://127.0.0.1:8080`).

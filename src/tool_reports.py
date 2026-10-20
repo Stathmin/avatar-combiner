@@ -71,17 +71,6 @@ def pcr_rows(report):
     return rows
 
 
-def sequence_rows(record):
-    return [
-        ('name', record.name),
-        ('format', record.source_format),
-        ('length', f'{len(record.sequence)} nt'),
-        ('topology', record.topology),
-        ('records', str(record.record_count)),
-        ('features', str(len(record.features))),
-    ]
-
-
 def layout_rows(report):
     return [
         ('wells', str(report.wells)),

@@ -8,7 +8,7 @@ Browser-level checks for the local web UI.
 uv run pytest dev/test_web_modes.py -q
 ```
 
-31 scenarios, ~23 s. Three long-lived servers (valid / seeded / empty),
+30 scenarios, ~24 s. Three long-lived servers (valid / seeded / empty),
 one Chromium, one context per test. Covers validation, upload collisions,
 jumbled and `.docx` rejection, pipeline run + manifest, results downloads,
 navigation, all nine tools, error paths, RU/EN, and duplicate-UI checks.

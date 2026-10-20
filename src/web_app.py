@@ -20,7 +20,6 @@ import pcr_tools
 import plate_layout
 import report_xlsx
 import run_pipeline
-import seq_import
 import seq_structure
 import tool_reports
 import tools as genetics
@@ -33,7 +32,6 @@ TOOLS = (
     ('units', 'tool_units'),
     ('structure', 'tool_structure'),
     ('pcr', 'tool_pcr'),
-    ('import', 'tool_import'),
     ('layout', 'tool_layout'),
     ('xlsx', 'tool_xlsx'),
 )
@@ -583,7 +581,6 @@ def build_app(base_dir):
             units_tab = ui.tab(tr('tool_units'))
             structure_tab = ui.tab(tr('tool_structure'))
             pcr_tab = ui.tab(tr('tool_pcr'))
-            import_tab = ui.tab(tr('tool_import'))
             layout_tab = ui.tab(tr('tool_layout'))
             xlsx_tab = ui.tab(tr('tool_xlsx'))
         tabs.style('display: none')
@@ -595,7 +592,6 @@ def build_app(base_dir):
             'units': units_tab,
             'structure': structure_tab,
             'pcr': pcr_tab,
-            'import': import_tab,
             'layout': layout_tab,
             'xlsx': xlsx_tab,
         }
@@ -738,24 +734,6 @@ def build_app(base_dir):
                     ),
                 )
 
-            with ui.tab_panel(import_tab):
-                import_out = ui.column()
-
-                async def on_sequence(event):
-                    suffix = Path(event.file.name).suffix.lower()
-                    target = Path(tempfile.mkdtemp()) / f'input{suffix}'
-                    target.write_bytes(await event.file.read())
-                    safe_show(
-                        import_out,
-                        lambda: _sequence_report(seq_import.load_sequence(target)),
-                    )
-
-                ui.label(tr('upload_sequence'))
-                ui.upload(on_upload=on_sequence, auto_upload=True).props(
-                    'accept=".gb,.gbk,.dna,.fa,.fasta"'
-                )
-                ui.label(tr('import_help')).classes('text-xs opacity-70')
-
             with ui.tab_panel(layout_tab):
                 layout_out = ui.column()
 
@@ -843,10 +821,6 @@ def _structure_report(report):
 
 def _pcr_report(report):
     return render_rows(tool_reports.pcr_rows(report))
-
-
-def _sequence_report(record):
-    return render_rows(tool_reports.sequence_rows(record))
 
 
 def _layout_report(report):

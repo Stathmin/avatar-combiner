@@ -11,7 +11,6 @@ def test_collects_reachable_local_modules():
         'pcr_tools',
         'plate_layout',
         'report_xlsx',
-        'seq_import',
         'seq_structure',
         'tools',
         'ui',

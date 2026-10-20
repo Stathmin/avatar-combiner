@@ -22,7 +22,6 @@ import pcr_tools
 import plate_layout
 import report_xlsx
 import run_pipeline
-import seq_import
 import seq_structure
 import tool_reports
 import tools as genetics
@@ -91,7 +90,7 @@ HELP = {
         ('Run', 'Press R or Enter. A new «Результат N» folder is created and every output is written there.'),
         ('Outputs', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv and combined_384_plate_ids.txt.'),
         ('Config', 'Press C. The workbook is found automatically; F chooses the file, S the four sheets, R the data range. No config file to edit.'),
-        ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, import GenBank, SnapGene and FASTA files, and export results to XLSX.'),
+        ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, and export results to XLSX.'),
         ('Web', 'Run with --web to open a local web UI: file and sheet selection, live log, results and genetics tools. The server listens on 127.0.0.1 only.'),
         ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
@@ -101,7 +100,7 @@ HELP = {
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
         ('Результаты', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv и combined_384_plate_ids.txt.'),
         ('Настройка', 'Нажмите C. Файл Excel находится автоматически; F — выбрать файл, S — четыре листа, R — диапазон. Править конфиг не нужно.'),
-        ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, импорт GenBank, SnapGene и FASTA, экспорт результатов в XLSX.'),
+        ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, экспорт результатов в XLSX.'),
         ('Веб', 'Запустите с --web: локальный веб-интерфейс с выбором файла и листов, живым логом, результатами и инструментами. Сервер слушает только 127.0.0.1.'),
         ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
@@ -705,10 +704,9 @@ class App:
                 ('3', self.t['tool_dna']),
                 ('4', self.t['tool_units']),
                 ('5', self.t['tool_structure']),
-                ('6', self.t['tool_import']),
-                ('7', self.t['tool_layout']),
-                ('8', self.t['tool_pcr']),
-                ('9', self.t['tool_xlsx']),
+                ('6', self.t['tool_layout']),
+                ('7', self.t['tool_pcr']),
+                ('8', self.t['tool_xlsx']),
                 ('B', self.t['back']),
             ]
             listing = ' · '.join(f'{key} {label}' for key, label in tools)
@@ -730,7 +728,7 @@ class App:
                 self.tool_menu_row(
                     [
                         ('5', self.t['tool_structure'], 'accent2'),
-                        ('8', self.t['tool_pcr'], 'accent2'),
+                        ('7', self.t['tool_pcr'], 'accent2'),
                     ],
                     inner,
                 ),
@@ -738,12 +736,11 @@ class App:
                 self.theme.paint(self.t['group_files'], 'dim', bold=True),
                 self.tool_menu_row(
                     [
-                        ('6', self.t['tool_import'], 'accent2'),
-                        ('7', self.t['tool_layout'], 'accent2'),
+                        ('6', self.t['tool_layout'], 'accent2'),
+                        ('8', self.t['tool_xlsx'], 'accent2'),
                     ],
                     inner,
                 ),
-                self.tool_menu_row([('9', self.t['tool_xlsx'], 'accent2')], inner),
                 '',
                 self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
             ]
@@ -921,22 +918,6 @@ class App:
         )
         if not report.hits:
             self.tool_output.append(self.theme.paint(self.t['structure_none'], 'dim'))
-
-    def tool_import(self):
-        self.tool_output = []
-        path = self.prompt_text(self.t['import_path'], self.t['import_hint'])
-        if path is None:
-            return
-        try:
-            record = seq_import.load_sequence(path)
-        except (genetics.ToolError, OSError, ImportError) as exc:
-            self.set_tool_error(exc)
-            return
-
-        self.tool_output = self.tool_rows(tool_reports.sequence_rows(record))
-        self.tool_output.extend(
-            self.tool_preview_lines(self.t['sequence'], record.sequence)
-        )
 
     def tool_layout(self):
         self.tool_output = []
@@ -1154,12 +1135,10 @@ class App:
         elif key == '5':
             self.tool_structure()
         elif key == '6':
-            self.tool_import()
-        elif key == '7':
             self.tool_layout()
-        elif key == '8':
+        elif key == '7':
             self.tool_pcr()
-        elif key == '9':
+        elif key == '8':
             self.tool_xlsx()
 
     def handle_results_key(self, key):

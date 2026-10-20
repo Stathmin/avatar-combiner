@@ -247,7 +247,6 @@ dependencies = [
     { name = "primer3-py" },
     { name = "pydna" },
     { name = "seqfold" },
-    { name = "snapgene-reader" },
     { name = "wellmap" },
 ]
 
@@ -272,7 +271,6 @@ requires-dist = [
     { name = "primer3-py", specifier = ">=2.3.1,<3" },
     { name = "pydna", specifier = ">=5.5.16,<6" },
     { name = "seqfold", specifier = ">=0.10.2,<1" },
-    { name = "snapgene-reader", specifier = ">=0.1.23,<1" },
     { name = "wellmap", specifier = "==3.5.2" },
 ]
 
@@ -695,15 +693,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/01/ee/02a2c011bdab74c6fb3c75474d40b3052059d95df7e73351460c8588d963/h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1", size = 101250, upload-time = "2025-04-24T03:35:25.427Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86", size = 37515, upload-time = "2025-04-24T03:35:24.344Z" },
-]
-
-[[package]]
-name = "html2text"
-version = "2025.4.15"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f8/27/e158d86ba1e82967cc2f790b0cb02030d4a8bef58e0c79a8590e9678107f/html2text-2025.4.15.tar.gz", hash = "sha256:948a645f8f0bc3abe7fd587019a2197a12436cd73d0d4908af95bfc8da337588", size = 64316, upload-time = "2025-04-15T04:02:30.045Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/84/1a0f9555fd5f2b1c924ff932d99b40a0f8a6b12f6dd625e2a47f415b00ea/html2text-2025.4.15-py3-none-any.whl", hash = "sha256:00569167ffdab3d7767a4cdf589b7f57e777a5ed28d12907d8c58769ec734acc", size = 34656, upload-time = "2025-04-15T04:02:28.44Z" },
 ]
 
 [[package]]
@@ -2289,20 +2278,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
-]
-
-[[package]]
-name = "snapgene-reader"
-version = "0.1.23"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "biopython" },
-    { name = "html2text" },
-    { name = "xmltodict" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b6/12/3b9b14e2c8f88e4092cf513fb9354666d89ab0328740d8744f59f1e21278/snapgene_reader-0.1.23.tar.gz", hash = "sha256:ab146f29008ab7f44f5a5e413677cfddbf0c609503db81aa9cbf0c18406aa70c", size = 7260, upload-time = "2025-05-10T10:24:36.701Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/ec/7396ad2b444930cb1f1fbffc387fe5b5edb0dfce4f05aea59c1aff1c2c9e/snapgene_reader-0.1.23-py3-none-any.whl", hash = "sha256:ade3204a19743efc99291de1fd8692c9d6b2881aaebc96eac81f12dfbf90a1f2", size = 7118, upload-time = "2025-05-10T10:24:35.098Z" },
 ]
 
 [[package]]
