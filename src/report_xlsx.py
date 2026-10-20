@@ -21,6 +21,14 @@ SHEETS = (
 )
 
 
+def _first_line(exc):
+    """Return the first line of an exception's root context message."""
+    while getattr(exc, '__context__', None) is not None and exc.__context__ is not exc:
+        exc = exc.__context__
+    lines = str(exc).splitlines()
+    return lines[0] if lines else type(exc).__name__
+
+
 def export_workbook(result_dir) -> Path:
     """Write available CSV files from a result folder into one XLSX."""
     result_dir = Path(result_dir)
@@ -43,9 +51,10 @@ def export_workbook(result_dir) -> Path:
     output = result_dir / 'combined_384_plate.xlsx'
     tmp_output = output.with_suffix('.tmp.xlsx')
     try:
+        frames = [(sheet, pd.read_csv(path)) for sheet, path in available]
         with pd.ExcelWriter(tmp_output, engine='openpyxl') as writer:
-            for sheet, path in available:
-                pd.read_csv(path).to_excel(writer, sheet_name=sheet, index=False)
+            for sheet, frame in frames:
+                frame.to_excel(writer, sheet_name=sheet, index=False)
 
         workbook = load_workbook(tmp_output)
         for sheet in workbook.worksheets:
@@ -65,7 +74,7 @@ def export_workbook(result_dir) -> Path:
         raise
     except Exception as exc:
         tmp_output.unlink(missing_ok=True)
-        detail = str(exc).splitlines()[0]
+        detail = _first_line(exc)
         raise ToolError(f'cannot export {result_dir.name}: {detail}') from exc
 
     return output

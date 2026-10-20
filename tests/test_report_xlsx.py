@@ -48,8 +48,12 @@ def test_malformed_csv_becomes_tool_error(tmp_path):
         'a,b\n"unterminated\n', encoding='utf-8'
     )
 
-    with pytest.raises(tools.ToolError, match='cannot export'):
+    with pytest.raises(tools.ToolError, match='cannot export') as exc_info:
         report_xlsx.export_workbook(result_dir)
 
+    message = str(exc_info.value)
+    assert 'At least one sheet must be visible' not in message
+    lowered = message.lower()
+    assert 'parse' in lowered or 'csv' in lowered or 'tokenizing' in lowered
     assert not (result_dir / 'combined_384_plate.xlsx').exists()
     assert not (result_dir / 'combined_384_plate.tmp.xlsx').exists()
