@@ -53,9 +53,9 @@ async def test_tools_page_lists_tools(user: User):
         'Units',
         'Structure',
         'PCR',
-        'Import',
-        'Layout',
-        'XLSX',
+        'Import sequence',
+        'Plate layout',
+        'XLSX export',
     ):
         await user.should_see(name)
 
@@ -64,6 +64,19 @@ async def test_tool_query_selects_tab(user: User):
     await user.open('/tools?tool=pcr')
 
     await user.should_see('Simulate')
+
+
+async def test_language_switch(user: User):
+    import web_app
+
+    try:
+        web_app.LANG['code'] = 'ru'
+        await user.open('/')
+        await user.should_see('Пайплайн')
+        await user.should_see('Tm праймера')
+        await user.should_see('Запустить')
+    finally:
+        web_app.LANG['code'] = 'en'
 
 
 async def test_run_from_web(user: User):
