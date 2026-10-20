@@ -357,11 +357,12 @@ def build_app(base_dir):
         with ui.card().classes('w-full panel'):
             ui.label(tr('sheets')).classes('text-lg font-bold')
             sheet_row = ui.row().classes('w-full')
+            sheet_status = ui.label('').classes('text-sm mt-1').mark('selection_status')
 
         range_input = ui.input(
             tr('data_range'),
             value='B3:M10',
-        ).classes('w-60')
+        ).classes('w-60').mark('range')
 
         log = ui.log(max_lines=1000).classes('w-full h-64 font-mono text-xs log-panel')
         log_lines = []
@@ -379,7 +380,9 @@ def build_app(base_dir):
         with sheet_row:
             for index in range(4):
                 sheet_selects.append(
-                    ui.select([], label=f"{tr('plate')} {index + 1}").classes('w-56')
+                    ui.select([], label=f"{tr('plate')} {index + 1}")
+                    .classes('w-56')
+                    .mark(f'sheet_{index + 1}')
                 )
 
         def load_sheets():
@@ -397,6 +400,23 @@ def build_app(base_dir):
                 )
                 select.update()
 
+        def refresh_validation():
+            if not workbook_select.value:
+                sheet_status.text = ''
+                button.enabled = False
+                return
+            try:
+                sheets = [value for value in current_sheets() if value]
+                state.apply(workbook_select.value, sheets, range_input.value)
+            except (app_config.ConfigError, OSError, ValueError) as exc:
+                sheet_status.text = str(exc)
+                sheet_status.style('color: #b91c1c')
+                button.enabled = False
+                return
+            sheet_status.text = tr('selection_ready')
+            sheet_status.style('color: #4d7c0f')
+            button.enabled = True
+
         def on_workbook(event):
             if not event.value:
                 return
@@ -406,6 +426,7 @@ def build_app(base_dir):
                 ui.notify(str(exc), type='negative')
                 return
             load_sheets()
+            refresh_validation()
 
         workbook_select.on_value_change(on_workbook)
 
@@ -430,6 +451,7 @@ def build_app(base_dir):
             workbook_select.value = str(target)
             workbook_select.update()
             load_sheets()
+            refresh_validation()
             ui.notify(f"{tr('uploaded')}: {name}", type='positive')
 
         upload.on_upload(on_upload)
@@ -467,7 +489,11 @@ def build_app(base_dir):
                 button.props(remove='loading')
 
         button = ui.button(tr('run'), on_click=run_now).props('color=primary size=lg')
+        for select in sheet_selects:
+            select.on_value_change(lambda event: refresh_validation())
+        range_input.on_value_change(lambda event: refresh_validation())
         load_sheets()
+        refresh_validation()
 
     @ui.page('/results')
     def results_page():

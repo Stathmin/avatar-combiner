@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from openpyxl import Workbook
 
 import app_config
 
@@ -88,6 +89,49 @@ def test_config_missing_range_is_rejected(tmp_path):
 
     with pytest.raises(app_config.ConfigError, match='data_range'):
         app_config.validate_config(config, tmp_path)
+
+
+def test_sheet_options_follow_workbook_content(tmp_path):
+    first = tmp_path / 'first.xlsx'
+    second = tmp_path / 'second.xlsx'
+    _workbook(first, ['a1', 'a2', 'a3', 'a4'])
+    _workbook(second, ['b1', 'b2', 'b3', 'b4'])
+
+    first_config = app_config.build_config(tmp_path, excel_file=first)
+    second_config = app_config.build_config(tmp_path, excel_file=second)
+
+    assert [item['sheet_name'] for item in first_config['sheets'].values()] == [
+        'a1',
+        'a2',
+        'a3',
+        'a4',
+    ]
+    assert [item['sheet_name'] for item in second_config['sheets'].values()] == [
+        'b1',
+        'b2',
+        'b3',
+        'b4',
+    ]
+
+
+def test_duplicate_sheets_are_rejected(tmp_path):
+    workbook = tmp_path / 'plates.xlsx'
+    _workbook(workbook, ['a1', 'a2', 'a3', 'a4'])
+
+    with pytest.raises(app_config.ConfigError, match='unique'):
+        app_config.build_config(
+            tmp_path,
+            excel_file=workbook,
+            sheets=['a1', 'a1', 'a2', 'a3'],
+        )
+
+
+def _workbook(path, names):
+    workbook = Workbook()
+    workbook.active.title = names[0]
+    for name in names[1:]:
+        workbook.create_sheet(name)
+    workbook.save(path)
 
 
 def test_existing_config_json_wins(tmp_path):

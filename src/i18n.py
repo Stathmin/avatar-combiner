@@ -124,7 +124,8 @@ TEXT = {'en': {'subtitle': '4 × 96-well plates  →  1 × 384-well plate',
         'hero_kicker': 'LOCAL GENETICS WORKBENCH',
         'hero_sub': 'Pick the workbook, confirm four sheets, run. Every result keeps a manifest.',
         'files_tab': 'Files',
-        'files': 'files'},
+        'files': 'files',
+        'selection_ready': '4 sheets selected'},
  'ru': {'subtitle': '4 планшета × 96 лунок  →  1 планшет × 384 лунки',
         'status': 'СТАТУС',
         'ready': 'ГОТОВО',
@@ -250,4 +251,5 @@ TEXT = {'en': {'subtitle': '4 × 96-well plates  →  1 × 384-well plate',
         'hero_sub': 'Выберите файл, проверьте четыре листа, запустите. Каждый результат хранит '
                     'manifest.',
         'files_tab': 'Файлы',
-        'files': 'файлов'}}
+        'files': 'файлов',
+        'selection_ready': 'Выбрано 4 листа'}}

@@ -24,6 +24,24 @@ async def test_home_shows_workbook(user: User):
     await user.should_see('plates.xlsx')
 
 
+async def test_sheet_selects_are_populated_from_workbook(user: User):
+    await user.open('/')
+
+    select = next(iter(user.find(marker='sheet_1').elements))
+
+    options = list(select.options)
+
+    assert options[:4] == ['пл1', 'пл2', 'пл3', 'пл4']
+    assert len(options) >= 5
+    assert 'пл5' in options
+
+
+async def test_home_shows_valid_selection(user: User):
+    await user.open('/')
+
+    await user.should_see('4 sheets selected')
+
+
 async def test_nav_lists_every_tool(user: User):
     await user.open('/')
 
