@@ -316,8 +316,8 @@ this table is the current state.
 | F5 | **Fixed** | Custom `xlsx_reader.py` (208 lines) deleted. Input and export both use openpyxl, imported lazily so TUI startup stays light. |
 | F6 | **Open** | `TEXT` and `TEXTS` are still separate dictionaries. Needs the shared i18n module from §6. |
 | F7 | **Fixed** | `update_sheets`, `config_source`, `sheets_hint`, `range_hint` and `ids` removed. The two standalone scripts remain as utilities; neither is imported or bundled. |
-| F8 | **Partial** | Major bounds added (`wellmap<4`, `nicegui<4`, `pydna<6`, etc.). The hand-written PyInstaller hidden-import list remains. |
-| F9 | **Partial** | The pipeline now raises `PipelineError`/`ConfigError`; the extractor no longer calls `sys.exit`. UI-level broad catches remain as the top-level error boundary. |
+| F8 | **Fixed** | Local hidden imports are generated from the AST import graph (`collect_local_modules`), with a test; `wellmap` is pinned to the exact version whose internals the loader uses; other majors remain bounded. |
+| F9 | **Fixed** | UI catches now name expected types (`ToolError`, `ConfigError`, `OSError`, `ValueError`, `ImportError`); pipeline boundaries add the exception class to the message. Remaining broad catches are deliberate: Windows ANSI setup, desktop opening, and storage access without a client context. |
 | F10 | **Fixed** | Uploads must be `.xlsx`/`.xlsm`; 50 MB cap; files older than 7 days are pruned at startup. |
 | F11 | **Fixed** | `run()` raises instead of exiting; `main()` maps `PipelineError` to exit code 1; extractor raises `FileNotFoundError`/`ValueError`. |
 | F12 | **Fixed** | `read_config` removed from both `run_pipeline` and the extractor; `app_config.load_config` is the only loader. |
