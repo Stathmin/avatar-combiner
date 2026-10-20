@@ -4,6 +4,7 @@
 Создаёт exe на Windows или бинарник на Linux с минимальным набором зависимостей.
 """
 
+import ast
 import importlib.util
 import os
 import platform
@@ -37,6 +38,41 @@ def check_dependencies():
     return True
 
 
+def collect_local_modules(entry='run_pipeline.py'):
+    """Return every local module reachable from the entry point.
+
+    Keeps the PyInstaller hidden-import list in sync with the real import
+    graph instead of maintaining it by hand.
+    """
+    modules = {
+        path.stem: path
+        for path in SCRIPT_DIR.glob('*.py')
+        if path.stem != 'build_binary'
+    }
+    seen = set()
+    queue = [Path(entry).stem]
+
+    while queue:
+        name = queue.pop()
+        if name in seen or name not in modules:
+            continue
+        seen.add(name)
+        tree = ast.parse(modules[name].read_text(encoding='utf-8'))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                candidates = [alias.name.split('.')[0] for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                candidates = [node.module.split('.')[0]]
+            else:
+                continue
+            queue.extend(
+                dep for dep in candidates if dep in modules and dep not in seen
+            )
+
+    seen.discard(Path(entry).stem)
+    return sorted(seen)
+
+
 def build_binary():
     """Собирает исполняемый файл."""
     system = platform.system()
@@ -68,10 +104,6 @@ def build_binary():
         '--optimize', '1',  # Keep docstrings: pydna.alphabet builds tables from __doc__.
         '--log-level', 'WARN',
         # Модули, которые подключаются лениво
-        '--hidden-import', 'extract_plates_from_excel',
-        '--hidden-import', 'combine_plates',
-        '--hidden-import', 'ui',
-        '--hidden-import', 'tools',
         '--hidden-import', 'primer3',
         '--hidden-import', 'primer3.thermoanalysis',
         '--hidden-import', 'primer3.p3helpers',
@@ -81,13 +113,6 @@ def build_binary():
         '--hidden-import', 'Bio.Data.IUPACData',
         '--hidden-import', 'pint',
         '--collect-data', 'pint',
-        # Генетический набор: локальные модули и их библиотеки
-        '--hidden-import', 'seq_structure',
-        '--hidden-import', 'seq_import',
-        '--hidden-import', 'plate_layout',
-        '--hidden-import', 'pcr_tools',
-        '--hidden-import', 'report_xlsx',
-        '--hidden-import', 'web_app',
         '--collect-all', 'nicegui',
         '--collect-all', 'seqfold',
         '--hidden-import', 'snapgene_reader',
@@ -143,6 +168,11 @@ def build_binary():
         # NiceGUI imports webbrowser to open the local UI.
         script_name
     ]
+
+    local_args = []
+    for module in collect_local_modules():
+        local_args.extend(['--hidden-import', module])
+    cmd[-1:-1] = local_args
 
     upx = shutil.which('upx')
     if upx:

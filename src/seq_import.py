@@ -61,7 +61,7 @@ def load_sequence(path):
             return _load_snapgene(path)
     except ToolError:
         raise
-    except Exception as exc:
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError, UnicodeError) as exc:
         raise ToolError(f'cannot read {path.name}: {exc}') from exc
 
     raise ToolError(f'unsupported file: {suffix or path.name}')

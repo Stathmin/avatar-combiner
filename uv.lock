@@ -272,7 +272,7 @@ requires-dist = [
     { name = "pydna", specifier = ">=5.5.16,<6" },
     { name = "seqfold", specifier = ">=0.10.2,<1" },
     { name = "snapgene-reader", specifier = ">=0.1.23,<1" },
-    { name = "wellmap", specifier = ">=3.5.2,<4" },
+    { name = "wellmap", specifier = "==3.5.2" },
 ]
 
 [package.metadata.requires-dev]

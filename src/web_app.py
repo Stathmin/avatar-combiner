@@ -364,7 +364,7 @@ class State:
         try:
             path = self.config_path()
             return app_config.sheet_names(path)
-        except Exception:
+        except (app_config.ConfigError, OSError, ValueError):
             return []
 
     def config_path(self):
@@ -538,7 +538,7 @@ def build_app(base_dir):
                 return
             try:
                 state.apply(event.value, None, range_input.value)
-            except Exception as exc:
+            except (app_config.ConfigError, OSError, ValueError) as exc:
                 ui.notify(str(exc), type='negative')
                 return
             load_sheets()
@@ -557,7 +557,7 @@ def build_app(base_dir):
                     state.base_dir, excel_file=target
                 )
                 state.error = None
-            except Exception as exc:
+            except (app_config.ConfigError, OSError, ValueError) as exc:
                 ui.notify(str(exc), type='negative')
                 return
             workbook_select.options = {
@@ -578,7 +578,7 @@ def build_app(base_dir):
                 excel = workbook_select.value
                 sheets = [value for value in current_sheets() if value]
                 config = state.apply(excel, sheets, range_input.value)
-            except Exception as exc:
+            except (app_config.ConfigError, OSError, ValueError) as exc:
                 ui.notify(str(exc), type='negative')
                 return
 
@@ -593,10 +593,8 @@ def build_app(base_dir):
                     log=lambda message: log_lines.append(str(message)),
                     config=config,
                 )
-            except SystemExit as exc:
+            except (run_pipeline.PipelineError, OSError) as exc:
                 ui.notify(f"{tr('failed')}: {exc}", type='negative')
-            except Exception as exc:
-                ui.notify(str(exc), type='negative')
             else:
                 render_result(result, result_box)
                 ui.notify(f"{tr('done')}: {result.name}", type='positive')
@@ -643,7 +641,7 @@ def build_app(base_dir):
         def safe_show(container, function):
             try:
                 show(container, function())
-            except Exception as exc:
+            except (genetics.ToolError, app_config.ConfigError, OSError, ValueError, ImportError) as exc:
                 show(container, f"{tr('error')}: {exc}")
 
         with ui.tabs().classes('w-full') as tabs:

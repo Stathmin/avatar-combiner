@@ -32,7 +32,9 @@ def load_layout(path):
     try:
         frame = _load_wellmap()(str(path))
     except Exception as exc:
-        raise ToolError(f'cannot read {path.name}: {exc}') from exc
+        raise ToolError(
+            f'cannot read {path.name} ({type(exc).__name__}): {exc}'
+        ) from exc
 
     conditions = tuple(
         str(column) for column in frame.columns if column not in STRUCTURAL

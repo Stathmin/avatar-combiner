@@ -72,7 +72,7 @@ def export_workbook(result_dir) -> Path:
     except ToolError:
         tmp_output.unlink(missing_ok=True)
         raise
-    except Exception as exc:
+    except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
         tmp_output.unlink(missing_ok=True)
         detail = _first_line(exc)
         raise ToolError(f'cannot export {result_dir.name}: {detail}') from exc

@@ -1036,7 +1036,7 @@ class App:
             return
         try:
             report = genetics.analyze_primer(sequence)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
         self.tool_output = [
@@ -1058,7 +1058,7 @@ class App:
             return
         try:
             report = genetics.analyze_pair(forward, reverse)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
         self.tool_output = [
@@ -1096,7 +1096,7 @@ class App:
                 'reverse': genetics.reverse(sequence),
                 'reverse_complement': genetics.reverse_complement(sequence),
             }
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1120,7 +1120,7 @@ class App:
             return
         try:
             results = genetics.convert_text(value, target)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
         self.tool_output = [
@@ -1135,7 +1135,7 @@ class App:
             return
         try:
             report = seq_structure.analyze_structure(sequence)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1160,7 +1160,7 @@ class App:
             return
         try:
             record = seq_import.load_sequence(path)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1183,7 +1183,7 @@ class App:
             return
         try:
             report = plate_layout.load_layout(path)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1210,7 +1210,7 @@ class App:
             values.append(value)
         try:
             report = pcr_tools.simulate_pcr(*values)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1228,7 +1228,7 @@ class App:
             return
         try:
             output = report_xlsx.export_workbook(path)
-        except Exception as exc:
+        except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
@@ -1446,11 +1446,7 @@ class App:
             self.run_result = result
             self.run_state = 'done'
             self.notice = (f"{self.t['last']}: {result.name}", 'success')
-        except SystemExit as exc:
-            self.run_state = 'error'
-            self.run_error = error_buffer.getvalue().strip() or f'Exit code {exc.code}'
-            self.notice = (self.run_error.splitlines()[-1], 'error')
-        except Exception as exc:
+        except (run_pipeline.PipelineError, OSError) as exc:
             self.run_state = 'error'
             self.run_error = str(exc)
             self.notice = (str(exc), 'error')
@@ -1520,7 +1516,7 @@ class App:
 
         try:
             config = app_config.build_config(self.base_dir, excel_file=path)
-        except Exception as exc:
+        except (app_config.ConfigError, OSError, ValueError) as exc:
             self.notice = (str(exc), 'error')
             return
         self.config = config
@@ -1533,7 +1529,7 @@ class App:
             return
         try:
             available = app_config.sheet_names(self.excel_path())
-        except Exception as exc:
+        except (app_config.ConfigError, OSError, ValueError) as exc:
             self.notice = (str(exc), 'error')
             return
 
@@ -1563,7 +1559,7 @@ class App:
                 sheets=names,
                 data_range=self.config.get('data_range'),
             )
-        except Exception as exc:
+        except (app_config.ConfigError, OSError, ValueError) as exc:
             self.notice = (str(exc), 'error')
             return
 
@@ -1580,7 +1576,7 @@ class App:
             return
         try:
             data_range = app_config.parse_range(text)
-        except Exception as exc:
+        except (app_config.ConfigError, ValueError) as exc:
             self.notice = (str(exc), 'error')
             return
 

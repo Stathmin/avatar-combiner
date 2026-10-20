@@ -140,7 +140,7 @@ def main(config_path='config.json', output_dir=None, base_dir=None, log=print, c
         workbook = load_workbook(excel_file, data_only=True)
     except Exception as exc:
         raise ValueError(
-            f"не удалось открыть '{excel_file}': {exc}"
+            f"не удалось открыть '{excel_file}' ({type(exc).__name__}): {exc}"
         ) from exc
     
     # Обрабатываем каждый планшет

@@ -40,7 +40,8 @@ def test_invalid_well_is_wrapped(tmp_path):
     write_toml(path, '[well.ZZ]\nsample = "x"\n')
 
     with pytest.raises(
-        tools.ToolError, match=r"cannot read bad\.toml: .*Cannot parse well 'ZZ'"
+        tools.ToolError,
+        match=r"cannot read bad\.toml \(LayoutError\): .*Cannot parse well 'ZZ'",
     ):
         plate_layout.load_layout(path)
 

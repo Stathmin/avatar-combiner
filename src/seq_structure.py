@@ -43,7 +43,7 @@ def analyze_structure(sequence):
         dg = _finite(seqfold.dg(sequence))
         tm = _finite(seqfold.tm(sequence))
         dot_bracket = _safe_dot(sequence, seqfold.dot_bracket(sequence, folded))
-    except Exception as exc:
+    except (ValueError, TypeError, ArithmeticError, RuntimeError) as exc:
         raise ToolError(f'cannot fold sequence: {exc}') from exc
 
     return StructureReport(

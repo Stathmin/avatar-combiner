@@ -142,7 +142,9 @@ def run(base_dir=None, log=print, config=None):
             log=log,
         )
     except Exception as exc:
-        raise PipelineError(f'извлечение из Excel: {exc}') from exc
+        raise PipelineError(
+            f'извлечение из Excel ({type(exc).__name__}): {exc}'
+        ) from exc
 
     log("\n✓ Извлечение данных из Excel выполнено успешно")
     log("\nЗапускаем объединение планшетов...")
@@ -155,7 +157,9 @@ def run(base_dir=None, log=print, config=None):
             log=log,
         )
     except Exception as exc:
-        raise PipelineError(f'объединение планшетов: {exc}') from exc
+        raise PipelineError(
+            f'объединение планшетов ({type(exc).__name__}): {exc}'
+        ) from exc
 
     log("\n✓ Объединение планшетов выполнено успешно")
     log("\n" + "=" * 60)
