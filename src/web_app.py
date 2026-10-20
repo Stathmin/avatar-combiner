@@ -644,102 +644,113 @@ def build_app(base_dir):
 
         with ui.tab_panels(tabs, value=tab_map.get(tool_key, tm_tab)).classes('w-full'):
             with ui.tab_panel(tm_tab):
-                sequence = ui.input(tr('sequence'))
-                out = ui.column()
+                tm_sequence = ui.input(tr('sequence')).mark('tm_sequence')
+                tm_out = ui.column()
                 ui.button(
                     tr('analyse'),
                     on_click=lambda: safe_show(
-                        out, lambda: _primer_report(genetics.analyze_primer(sequence.value))
+                        tm_out,
+                        lambda: _primer_report(
+                            genetics.analyze_primer(tm_sequence.value)
+                        ),
                     ),
-                )
+                ).mark('tm_button')
 
             with ui.tab_panel(pair_tab):
-                forward = ui.input(tr('forward'))
-                reverse = ui.input(tr('reverse'))
-                out = ui.column()
+                pair_forward = ui.input(tr('forward'))
+                pair_reverse = ui.input(tr('reverse'))
+                pair_out = ui.column()
                 ui.button(
                     tr('analyse_pair'),
                     on_click=lambda: safe_show(
-                        out,
+                        pair_out,
                         lambda: _pair_report(
-                            genetics.analyze_pair(forward.value, reverse.value)
-                        ),
-                    ),
-                )
-
-            with ui.tab_panel(dna_tab):
-                sequence = ui.input(tr('sequence'))
-                out = ui.column()
-                ui.button(
-                    tr('transform'),
-                    on_click=lambda: safe_show(out, lambda: _dna_report(sequence.value)),
-                )
-
-            with ui.tab_panel(units_tab):
-                quantity = ui.input(tr('value'), placeholder='25 uM')
-                target = ui.input(tr('target_unit'), placeholder='nM')
-                out = ui.column()
-                ui.button(
-                    tr('convert'),
-                    on_click=lambda: safe_show(
-                        out,
-                        lambda: '\n'.join(
-                            f'{unit} {genetics.format_number(amount)}'
-                            for unit, amount in genetics.convert_text(
-                                quantity.value, target.value
+                            genetics.analyze_pair(
+                                pair_forward.value, pair_reverse.value
                             )
                         ),
                     ),
                 )
 
+            with ui.tab_panel(dna_tab):
+                dna_sequence = ui.input(tr('sequence'))
+                dna_out = ui.column()
+                ui.button(
+                    tr('transform'),
+                    on_click=lambda: safe_show(
+                        dna_out, lambda: _dna_report(dna_sequence.value)
+                    ),
+                )
+
+            with ui.tab_panel(units_tab):
+                unit_quantity = ui.input(tr('value'), placeholder='25 uM').mark('unit_value')
+                unit_target = ui.input(tr('target_unit'), placeholder='nM').mark('unit_target')
+                unit_out = ui.column()
+                ui.button(
+                    tr('convert'),
+                    on_click=lambda: safe_show(
+                        unit_out,
+                        lambda: '\n'.join(
+                            f'{genetics.format_number(amount)} {unit}'
+                            for unit, amount in genetics.convert_text(
+                                unit_quantity.value, unit_target.value
+                            )
+                        ),
+                    ),
+                ).mark('unit_button')
+
             with ui.tab_panel(structure_tab):
-                sequence = ui.input(tr('sequence'))
-                out = ui.column()
+                structure_sequence = ui.input(tr('sequence'))
+                structure_out = ui.column()
                 ui.button(
                     tr('fold'),
                     on_click=lambda: safe_show(
-                        out,
+                        structure_out,
                         lambda: _structure_report(
-                            seq_structure.analyze_structure(sequence.value)
+                            seq_structure.analyze_structure(
+                                structure_sequence.value
+                            )
                         ),
                     ),
                 )
 
             with ui.tab_panel(pcr_tab):
-                template = ui.textarea(tr('template'))
-                forward = ui.input(tr('forward'))
-                reverse = ui.input(tr('reverse'))
-                out = ui.column()
+                pcr_template = ui.textarea(tr('template'))
+                pcr_forward = ui.input(tr('forward'))
+                pcr_reverse = ui.input(tr('reverse'))
+                pcr_out = ui.column()
                 ui.button(
                     tr('simulate'),
                     on_click=lambda: safe_show(
-                        out,
+                        pcr_out,
                         lambda: _pcr_report(
                             pcr_tools.simulate_pcr(
-                                template.value,
-                                forward.value,
-                                reverse.value,
+                                pcr_template.value,
+                                pcr_forward.value,
+                                pcr_reverse.value,
                             )
                         ),
                     ),
                 )
 
             with ui.tab_panel(files_tab):
-                out = ui.column()
+                files_out = ui.column()
 
                 async def on_sequence(event):
                     suffix = Path(event.file.name).suffix.lower()
                     target = Path(tempfile.mkdtemp()) / f'input{suffix}'
                     target.write_bytes(await event.file.read())
                     safe_show(
-                        out, lambda: _sequence_report(seq_import.load_sequence(target))
+                        files_out,
+                        lambda: _sequence_report(seq_import.load_sequence(target)),
                     )
 
                 async def on_layout(event):
                     target = Path(tempfile.mkdtemp()) / 'plate.toml'
                     target.write_bytes(await event.file.read())
                     safe_show(
-                        out, lambda: _layout_report(plate_layout.load_layout(target))
+                        files_out,
+                        lambda: _layout_report(plate_layout.load_layout(target)),
                     )
 
                 ui.label(tr('upload_sequence'))
@@ -757,7 +768,7 @@ def build_app(base_dir):
                 ui.button(
                     tr('export_xlsx'),
                     on_click=lambda: safe_show(
-                        out,
+                        files_out,
                         lambda: str(
                             report_xlsx.export_workbook(
                                 state.base_dir / folder.value

@@ -66,6 +66,25 @@ async def test_tool_query_selects_tab(user: User):
     await user.should_see('Simulate')
 
 
+async def test_tm_tool_produces_output(user: User):
+    await user.open('/tools?tool=tm')
+
+    user.find(marker='tm_sequence').type('ACGTACGTACGT')
+    user.find(marker='tm_button').click()
+
+    await user.should_see('kcal/mol')
+
+
+async def test_units_tool_produces_output(user: User):
+    await user.open('/tools?tool=units')
+
+    user.find(marker='unit_value').type('25 uM')
+    user.find(marker='unit_target').type('nM')
+    user.find(marker='unit_button').click()
+
+    await user.should_see('25000 nM')
+
+
 async def test_language_switch(user: User):
     import web_app
 
