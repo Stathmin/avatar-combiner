@@ -173,6 +173,16 @@ _UNIT_ALIASES = {
 }
 
 
+def dimensions():
+    """Return the supported quantity names."""
+    return list(DISPLAY_UNITS)
+
+
+def units_for(dimension):
+    """Return display units for one quantity."""
+    return [display for display, _ in DISPLAY_UNITS.get(dimension, ())]
+
+
 def parse_quantity(text):
     """Parse text such as ``25 uM`` into ``(magnitude, unit, dimensionality)``."""
     quantity = _parse_quantity(text)

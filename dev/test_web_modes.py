@@ -11,10 +11,10 @@ tools, navigation and language switching.
 
 from __future__ import annotations
 
-import itertools
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -27,7 +27,12 @@ from openpyxl import Workbook
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-PORTS = itertools.count(8160)
+
+
+def free_port():
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1', 0))
+        return sock.getsockname()[1]
 
 PCR_TEMPLATE = (
     'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
@@ -73,6 +78,7 @@ def prepare_env(base: Path, seed_result: bool = False):
     make_jumbled(base / 'jumbled.xlsx')
     (base / 'notes.docx').write_bytes(b'not a workbook')
     (base / 'seq.fa').write_text('>seq1\nACGTACGT\n', encoding='utf-8')
+    (base / 'bad.fa').write_text('not a fasta file', encoding='utf-8')
     (base / 'plate.toml').write_text(
         '[well.A1]\nsample = "soy1"\n\n[well.B1]\nsample = "soy2"\n',
         encoding='utf-8',
@@ -89,9 +95,12 @@ def prepare_env(base: Path, seed_result: bool = False):
         )
 
 
-def wait_for_server(url, timeout=30):
+def wait_for_server(url, process, log_path, timeout=30):
     deadline = time.time() + timeout
     while time.time() < deadline:
+        if process.poll() is not None:
+            tail = Path(log_path).read_text(encoding='utf-8')[-2000:]
+            raise RuntimeError(f'server exited early:\n{tail}')
         try:
             with urlopen(url, timeout=1) as response:
                 if response.status == 200:
@@ -103,9 +112,10 @@ def wait_for_server(url, timeout=30):
 
 @contextmanager
 def running_web(base: Path):
-    port = next(PORTS)
+    port = free_port()
     url = f'http://127.0.0.1:{port}'
-    log = open(base / 'server.log', 'w', encoding='utf-8')
+    log_path = base / 'server.log'
+    log = open(log_path, 'w', encoding='utf-8')
     env = dict(os.environ)
     env.pop('PYTEST_CURRENT_TEST', None)
     env.pop('NICEGUI_SCREEN_TEST_PORT', None)
@@ -117,7 +127,7 @@ def running_web(base: Path):
         start_new_session=True,
     )
     try:
-        wait_for_server(url)
+        wait_for_server(url, process, log_path)
         yield url
     finally:
         os.killpg(process.pid, signal.SIGTERM)
@@ -304,6 +314,7 @@ def test_run_logs_result_and_download(web, page):
     expect(page.get_by_text('Done:')).to_be_visible()
     expect(page.get_by_text('Пайплайн выполнен успешно!')).to_be_visible()
     expect(page.get_by_text('manifest.json').first).to_be_visible()
+    expect(page.get_by_text('sheet_name: p1')).to_be_visible()
 
     download = page.get_by_role('button', name='combined_384_plate.csv')
     with page.expect_download() as info:
@@ -327,16 +338,16 @@ def test_results_list_and_download(web_seed, page):
     assert info.value.suggested_filename == 'combined_384_plate.csv'
 
 
-TOOL_TABS = (
-    ('tm', 'Primer Tm'),
-    ('pair', 'Primer pair'),
-    ('dna', 'DNA'),
-    ('units', 'Units'),
-    ('structure', 'Structure'),
-    ('pcr', 'PCR'),
-    ('import', 'Files'),
-    ('layout', 'Files'),
-    ('xlsx', 'Files'),
+TOOL_MARKERS = (
+    ('tm', 'Sequence'),
+    ('pair', 'Forward'),
+    ('dna', 'Sequence'),
+    ('units', 'Value'),
+    ('structure', 'Sequence'),
+    ('pcr', 'Template'),
+    ('import', 'GenBank'),
+    ('layout', 'Wellmap layout'),
+    ('xlsx', 'Export XLSX'),
 )
 
 
@@ -344,10 +355,11 @@ def test_navigation_selects_every_tool(web, page):
     _, url = web
     open_home(page, url)
 
-    for key, tab_name in TOOL_TABS:
+    for key, marker in TOOL_MARKERS:
         page.goto(f'{url}/tools?tool={key}')
-        expect(page.locator('.q-tab--active')).to_contain_text(tab_name)
-        expect(page.locator('.q-tab-panel:visible')).to_be_visible()
+        panel = page.locator('.q-tab-panel:visible')
+        expect(panel).to_be_visible()
+        expect(panel.get_by_text(marker, exact=False).first).to_be_visible()
 
 
 def test_tool_primer_tm(web, page):
@@ -384,8 +396,9 @@ def test_tool_dna(web, page):
     panel = visible_panel(page)
     panel.get_by_label('Sequence').fill('ATGC')
     panel.get_by_role('button', name='Transform').click()
-    expect(tool_output(page)).to_contain_text('TACG')
-    expect(tool_output(page)).to_contain_text('GCAT')
+    expect(panel).to_contain_text('TACG')
+    expect(panel).to_contain_text('GCAT')
+    assert panel.locator('button').count() >= 5
 
 
 def test_tool_units(web, page):
@@ -393,10 +406,16 @@ def test_tool_units(web, page):
     page.goto(url + '/tools?tool=units')
 
     panel = visible_panel(page)
-    panel.get_by_label('Value').fill('25 uM')
-    panel.get_by_label('Target unit').fill('nM')
     panel.get_by_role('button', name='Convert').click()
     expect(tool_output(page)).to_contain_text('25000 nM')
+
+    selects = panel.locator('.q-select')
+    choose(page, selects.nth(0), 'Length')
+    choose(page, selects.nth(1), 'bp')
+    choose(page, selects.nth(2), 'kb')
+    panel.get_by_label('Value').fill('1')
+    panel.get_by_role('button', name='Convert').click()
+    expect(tool_output(page)).to_contain_text('0.001 kb')
 
 
 def test_tool_structure(web, page):
@@ -407,6 +426,8 @@ def test_tool_structure(web, page):
     panel.get_by_label('Sequence').fill('ACGTACGTACGT')
     panel.get_by_role('button', name='Fold').click()
     expect(tool_output(page)).to_contain_text('((((....))))')
+    expect(tool_output(page)).to_contain_text('Pairs')
+    expect(tool_output(page)).to_contain_text('1-12')
 
 
 def test_tool_pcr(web, page):
@@ -419,6 +440,33 @@ def test_tool_pcr(web, page):
     panel.get_by_label('Reverse').fill(PCR_REVERSE)
     panel.get_by_role('button', name='Simulate').click()
     expect(tool_output(page)).to_contain_text('200 nt')
+
+
+def test_tool_pcr_degenerate(web, page):
+    _, url = web
+    page.goto(url + '/tools?tool=pcr')
+
+    panel = visible_panel(page)
+    panel.get_by_label('Template').fill(PCR_TEMPLATE)
+    panel.get_by_label('Forward').fill('GCTAAAGACRATTACATAAC')
+    panel.get_by_label('Reverse').fill(PCR_REVERSE)
+    panel.get_by_role('button', name='Simulate').click()
+    expect(tool_output(page)).to_contain_text('200 nt')
+    expect(tool_output(page)).to_contain_text('Degenerate bases')
+    expect(tool_output(page)).to_contain_text('1')
+
+
+def test_tool_pair_warns_on_bad_primers(web, page):
+    _, url = web
+    page.goto(url + '/tools?tool=pair')
+
+    panel = visible_panel(page)
+    panel.get_by_label('Forward').fill('T' * 22)
+    panel.get_by_label('Reverse').fill('C' * 11)
+    panel.get_by_role('button', name='Analyse pair').click()
+    expect(tool_output(page)).to_contain_text('Warnings')
+    expect(tool_output(page)).to_contain_text('forward GC 0.0%')
+    expect(tool_output(page)).to_contain_text('no stable duplex')
 
 
 def test_tool_import_fasta(web, page):
@@ -437,7 +485,7 @@ def test_tool_layout(web, page):
     page.goto(url + '/tools?tool=layout')
 
     panel = visible_panel(page)
-    panel.locator('input[type=file]').nth(1).set_input_files(str(base / 'plate.toml'))
+    panel.locator('input[type=file]').nth(0).set_input_files(str(base / 'plate.toml'))
     expect(tool_output(page)).to_contain_text('sample')
     expect(tool_output(page)).to_contain_text('2')
 
@@ -472,6 +520,7 @@ def test_tools_page_has_no_duplicate_index(web, page):
 
     assert page.locator('.tool-index').count() == 0
     assert page.locator('.q-tab-panel:visible').count() == 1
+    expect(page.locator('.q-tabs')).to_be_hidden()
     assert page.get_by_text('All tools').count() == 0
 
 
@@ -494,10 +543,9 @@ def test_tools_errors_are_informative(web, page):
     base, url = web
     page.goto(url + '/tools?tool=units')
     panel = visible_panel(page)
-    panel.get_by_label('Value').fill('25 xyz')
-    panel.get_by_label('Target unit').fill('nM')
+    panel.get_by_label('Value').fill('abc')
     panel.get_by_role('button', name='Convert').click()
-    expect(tool_output(page)).to_contain_text('Error:')
+    expect(tool_output(page)).to_contain_text('value must be a number')
 
     page.goto(url + '/tools?tool=pcr')
     panel = visible_panel(page)
@@ -509,7 +557,7 @@ def test_tools_errors_are_informative(web, page):
 
     page.goto(url + '/tools?tool=import')
     panel = visible_panel(page)
-    panel.locator('input[type=file]').nth(0).set_input_files(str(base / 'notes.docx'))
+    panel.locator('input[type=file]').nth(0).set_input_files(str(base / 'bad.fa'))
     expect(tool_output(page)).to_contain_text('Error:')
 
 
@@ -517,8 +565,7 @@ def test_tabs_and_drawer_have_unique_names(web, page):
     _, url = web
     page.goto(url + '/tools')
 
-    tabs = [text.strip() for text in page.locator('.q-tab').all_inner_texts()]
-    assert len(tabs) == len(set(tabs)) == 7
+    expect(page.locator('.q-tabs')).to_be_hidden()
 
     links = [
         text.strip()

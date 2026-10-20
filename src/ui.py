@@ -816,7 +816,7 @@ class App:
         lines = []
         for key, value in rows:
             if value is None:
-                value = self.t['none']
+                value = self.t['no_structure']
             if key in long_keys:
                 lines.extend(self.tool_sequence_lines(self.t[key], value))
             else:
@@ -883,10 +883,16 @@ class App:
 
     def tool_units(self):
         self.tool_output = []
-        value = self.prompt_text(self.t['quantity'], self.t['unit_hint'])
+        value = self.prompt_text(
+            self.t['quantity'],
+            f"{self.t['unit_hint']} {self.t['unit_list']}",
+        )
         if value is None:
             return
-        target = self.prompt_text(self.t['target_unit'], self.t['unit_hint'])
+        target = self.prompt_text(
+            self.t['target_unit'],
+            f"{self.t['unit_hint']} {self.t['unit_list']}",
+        )
         if target is None:
             return
         try:
@@ -949,8 +955,8 @@ class App:
         self.tool_output = []
         prompts = (
             (self.t['pcr_template'], self.t['pcr_hint'], {'max_length': 10000}),
-            (self.t['pcr_forward'], self.t['primer_hint'], {}),
-            (self.t['pcr_reverse'], self.t['primer_hint'], {}),
+            (self.t['pcr_forward'], self.t['pcr_primer_hint'], {}),
+            (self.t['pcr_reverse'], self.t['pcr_primer_hint'], {}),
         )
         values = []
         for title, hint, options in prompts:

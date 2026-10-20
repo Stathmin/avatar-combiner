@@ -99,11 +99,11 @@ async def test_nav_lists_every_tool(user: User):
         'Results',
         'Primer Tm',
         'Primer pair',
-        'DNA',
+        'DNA transforms',
         'Units',
         'Structure',
         'PCR',
-        'Import sequence',
+        'Sequence files',
         'Plate layout',
         'XLSX export',
     ):
@@ -116,11 +116,11 @@ async def test_tools_page_lists_tools(user: User):
     for name in (
         'Primer Tm',
         'Primer pair',
-        'DNA',
+        'DNA transforms',
         'Units',
         'Structure',
         'PCR',
-        'Import sequence',
+        'Sequence files',
         'Plate layout',
         'XLSX export',
     ):
@@ -145,8 +145,6 @@ async def test_tm_tool_produces_output(user: User):
 async def test_units_tool_produces_output(user: User):
     await user.open('/tools?tool=units')
 
-    user.find(marker='unit_value').type('25 uM')
-    user.find(marker='unit_target').type('nM')
     user.find(marker='unit_button').click()
 
     await user.should_see('25000 nM')

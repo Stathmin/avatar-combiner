@@ -22,14 +22,21 @@ def primer_rows(report):
 
 
 def pair_rows(report):
-    return [
+    delta = abs(report.forward.tm - report.reverse.tm)
+    rows = [
         ('forward', f'{report.forward.sequence} · Tm {report.forward.tm:.1f} °C'),
         ('reverse_primer', f'{report.reverse.sequence} · Tm {report.reverse.tm:.1f} °C'),
         ('gc', f'F {report.forward.gc:.1f}% · R {report.reverse.gc:.1f}%'),
-        ('delta_tm', f'{abs(report.forward.tm - report.reverse.tm):.1f} °C'),
+        ('delta_tm', f'{delta:.1f} °C'),
+        ('homodimer_forward', _thermo(report.forward.homodimer)),
+        ('homodimer_reverse', _thermo(report.reverse.homodimer)),
         ('heterodimer', _thermo(report.heterodimer)),
         ('end_stability', _thermo(report.end_stability)),
     ]
+    warnings = _pair_warnings(report, delta)
+    if warnings:
+        rows.append(('warnings', warnings))
+    return rows
 
 
 def dna_rows(sequence):
@@ -50,14 +57,18 @@ def structure_rows(report):
         ('dg', 'n/a' if report.dg is None else f'{report.dg:.2f} kcal/mol'),
         ('tm', 'n/a' if report.tm is None else f'{report.tm:.1f} °C'),
         ('structure_fold', report.dot_bracket),
+        ('pairs', _pairs(report.dot_bracket)),
     ]
 
 
 def pcr_rows(report):
-    return [
+    rows = [
         ('product', f'{report.length} nt'),
         ('sequence', report.sequence),
     ]
+    if report.degenerate:
+        rows.append(('degenerate', str(report.degenerate)))
+    return rows
 
 
 def sequence_rows(record):
@@ -92,6 +103,36 @@ def _thermo(result):
         f'Tm {result.tm:.1f} °C · '
         f'ΔG {result.dg / 1000.0:.2f} kcal/mol'
     )
+
+
+def _pairs(dot_bracket):
+    stacks = {}
+    pairs = []
+    for index, char in enumerate(dot_bracket, start=1):
+        if char == '(':
+            stacks.setdefault('(', []).append(index)
+        elif char == ')' and stacks.get('('):
+            pairs.append(f'{stacks["("].pop()}-{index}')
+    return ', '.join(pairs) or 'none'
+
+
+def _pair_warnings(report, delta):
+    issues = []
+    for label, primer in (('forward', report.forward), ('reverse', report.reverse)):
+        if primer.gc < 40 or primer.gc > 60:
+            issues.append(f'{label} GC {primer.gc:.1f}%')
+        if primer.tm < 55 or primer.tm > 65:
+            issues.append(f'{label} Tm {primer.tm:.1f} °C')
+    if delta > 3:
+        issues.append(f'ΔTm {delta:.1f} °C')
+    if getattr(report.heterodimer, 'structure_found', False):
+        issues.append('heterodimer present')
+    if getattr(report.end_stability, 'structure_found', False):
+        issues.append("3' end binding")
+    for label, primer in (('forward', report.forward), ('reverse', report.reverse)):
+        if getattr(primer.homodimer, 'structure_found', False):
+            issues.append(f'{label} homodimer')
+    return '; '.join(issues) or None
 
 
 def _gc(sequence):

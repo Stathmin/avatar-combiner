@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tools import ToolError, normalize_primer
+from tools import ToolError, normalize_dna
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class PcrReport:
     sequence: str
     forward: str
     reverse: str
+    degenerate: int = 0
 
 
 def simulate_pcr(template, forward, reverse, circular=False):
@@ -34,9 +35,12 @@ def simulate_pcr(template, forward, reverse, circular=False):
     if not isinstance(circular, bool):
         raise ToolError('circular must be True or False')
 
-    template = normalize_primer(template)
-    forward = normalize_primer(forward)
-    reverse = normalize_primer(reverse)
+    template = normalize_dna(template)
+    forward = normalize_dna(forward)
+    reverse = normalize_dna(reverse)
+    degenerate = sum(
+        base not in 'ACGT' for base in forward + reverse
+    )
 
     try:
         amplicon = pcr(forward, reverse, Dseqrecord(template, circular=circular))
@@ -49,4 +53,5 @@ def simulate_pcr(template, forward, reverse, circular=False):
         sequence=str(amplicon.seq).upper(),
         forward=forward,
         reverse=reverse,
+        degenerate=degenerate,
     )

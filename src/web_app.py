@@ -316,7 +316,19 @@ def build_app(base_dir):
             manifest = Path(folder) / 'manifest.json'
             if manifest.is_file():
                 data = json.loads(manifest.read_text(encoding='utf-8'))
-                ui.code(json.dumps(data, ensure_ascii=False, indent=2), language='json')
+                tree = ui.tree(
+                    [_json_node(data, 'manifest', 'manifest.json')],
+                    label_key='label',
+                    node_key='id',
+                    children_key='children',
+                ).classes('w-full font-mono text-sm')
+                tree.expand()
+                ui.button(
+                    icon='content_copy',
+                    on_click=lambda: ui.clipboard.write(
+                        json.dumps(data, ensure_ascii=False, indent=2)
+                    ),
+                ).props('flat dense round size=sm').tooltip('Copy JSON')
             with ui.row().classes('flex-wrap'):
                 for path in result_files(folder):
                     ui.button(
@@ -571,7 +583,10 @@ def build_app(base_dir):
             units_tab = ui.tab(tr('tool_units'))
             structure_tab = ui.tab(tr('tool_structure'))
             pcr_tab = ui.tab(tr('tool_pcr'))
-            files_tab = ui.tab(tr('files_tab'))
+            import_tab = ui.tab(tr('tool_import'))
+            layout_tab = ui.tab(tr('tool_layout'))
+            xlsx_tab = ui.tab(tr('tool_xlsx'))
+        tabs.style('display: none')
 
         tab_map = {
             'tm': tm_tab,
@@ -580,9 +595,9 @@ def build_app(base_dir):
             'units': units_tab,
             'structure': structure_tab,
             'pcr': pcr_tab,
-            'import': files_tab,
-            'layout': files_tab,
-            'xlsx': files_tab,
+            'import': import_tab,
+            'layout': layout_tab,
+            'xlsx': xlsx_tab,
         }
 
         with ui.tab_panels(tabs, value=tab_map.get(tool_key, tm_tab)).classes('w-full'):
@@ -616,30 +631,77 @@ def build_app(base_dir):
                 )
 
             with ui.tab_panel(dna_tab):
-                dna_sequence = ui.input(tr('sequence'))
+                dna_sequence = ui.input(tr('sequence')).mark('dna_sequence')
                 dna_out = ui.column()
-                ui.button(
-                    tr('transform'),
-                    on_click=lambda: safe_show(
-                        dna_out, lambda: _dna_report(dna_sequence.value)
-                    ),
-                )
+
+                def run_dna():
+                    try:
+                        rows = tool_reports.dna_rows(dna_sequence.value)
+                    except (
+                        genetics.ToolError,
+                        OSError,
+                        ValueError,
+                    ) as exc:
+                        show(dna_out, f"{tr('error')}: {exc}")
+                        return
+                    dna_out.clear()
+                    with dna_out:
+                        for key, value in rows:
+                            with ui.row().classes('items-center gap-2 w-full'):
+                                ui.label(tr(key)).classes('text-xs opacity-60 w-32')
+                                ui.label(value).classes('font-mono break-all')
+                                ui.button(
+                                    icon='content_copy',
+                                    on_click=lambda value=value: ui.clipboard.write(value),
+                                ).props('flat dense round size=sm')
+
+                ui.button(tr('transform'), on_click=run_dna).mark('dna_button')
 
             with ui.tab_panel(units_tab):
-                unit_quantity = ui.input(tr('value'), placeholder='25 uM').mark('unit_value')
-                unit_target = ui.input(tr('target_unit'), placeholder='nM').mark('unit_target')
+                unit_dimension = ui.select(
+                    {
+                        name: name.capitalize()
+                        for name in genetics.dimensions()
+                    },
+                    value='concentration',
+                    label=tr('dimension'),
+                ).mark('unit_dimension')
+                unit_from = ui.select(
+                    genetics.units_for('concentration'),
+                    value='uM',
+                    label=tr('from_unit'),
+                ).mark('unit_from')
+                unit_to = ui.select(
+                    genetics.units_for('concentration'),
+                    value='nM',
+                    label=tr('to_unit'),
+                ).mark('unit_to')
+                unit_value = ui.input(tr('value'), value='25').mark('unit_value')
                 unit_out = ui.column()
+
+                def change_dimension(event):
+                    units = genetics.units_for(event.value)
+                    unit_from.options = units
+                    unit_to.options = units
+                    unit_from.value = units[0]
+                    unit_to.value = units[-1] if len(units) > 1 else units[0]
+                    unit_from.update()
+                    unit_to.update()
+
+                unit_dimension.on_value_change(change_dimension)
+
+                def convert_units():
+                    raw = str(unit_value.value).strip().replace(',', '.')
+                    try:
+                        number = float(raw)
+                    except ValueError as exc:
+                        raise genetics.ToolError('value must be a number') from exc
+                    result = genetics.convert(number, unit_from.value, unit_to.value)
+                    return f'{genetics.format_number(result)} {unit_to.value}'
+
                 ui.button(
                     tr('convert'),
-                    on_click=lambda: safe_show(
-                        unit_out,
-                        lambda: '\n'.join(
-                            f'{amount} {unit}'
-                            for unit, amount in tool_reports.unit_rows(
-                                unit_quantity.value, unit_target.value
-                            )
-                        ),
-                    ),
+                    on_click=lambda: safe_show(unit_out, convert_units),
                 ).mark('unit_button')
 
             with ui.tab_panel(structure_tab):
@@ -676,31 +738,40 @@ def build_app(base_dir):
                     ),
                 )
 
-            with ui.tab_panel(files_tab):
-                files_out = ui.column()
+            with ui.tab_panel(import_tab):
+                import_out = ui.column()
 
                 async def on_sequence(event):
                     suffix = Path(event.file.name).suffix.lower()
                     target = Path(tempfile.mkdtemp()) / f'input{suffix}'
                     target.write_bytes(await event.file.read())
                     safe_show(
-                        files_out,
+                        import_out,
                         lambda: _sequence_report(seq_import.load_sequence(target)),
                     )
+
+                ui.label(tr('upload_sequence'))
+                ui.upload(on_upload=on_sequence, auto_upload=True).props(
+                    'accept=".gb,.gbk,.dna,.fa,.fasta"'
+                )
+                ui.label(tr('import_help')).classes('text-xs opacity-70')
+
+            with ui.tab_panel(layout_tab):
+                layout_out = ui.column()
 
                 async def on_layout(event):
                     target = Path(tempfile.mkdtemp()) / 'plate.toml'
                     target.write_bytes(await event.file.read())
                     safe_show(
-                        files_out,
+                        layout_out,
                         lambda: _layout_report(plate_layout.load_layout(target)),
                     )
 
-                ui.label(tr('upload_sequence'))
-                ui.upload(on_upload=on_sequence, auto_upload=True)
                 ui.label(tr('upload_layout'))
                 ui.upload(on_upload=on_layout, auto_upload=True)
 
+            with ui.tab_panel(xlsx_tab):
+                xlsx_out = ui.column()
                 result_dirs = sorted(
                     path.name
                     for path in state.base_dir.iterdir()
@@ -711,23 +782,47 @@ def build_app(base_dir):
                 ui.button(
                     tr('export_xlsx'),
                     on_click=lambda: safe_show(
-                        files_out,
+                        xlsx_out,
                         lambda: str(
                             report_xlsx.export_workbook(
                                 state.base_dir / folder.value
                             )
                         ),
                     ),
-                )
+                ).mark('xlsx_button')
 
     return state
 
 
 def render_rows(rows):
     return '\n'.join(
-        f"{tr(key)}  {tr('none') if value is None else value}"
+        f"{tr(key)}  {tr('no_structure') if value is None else value}"
         for key, value in rows
     )
+
+
+def _json_node(value, path, label):
+    if isinstance(value, dict):
+        return {
+            'id': path,
+            'label': label,
+            'expand': True,
+            'children': [
+                _json_node(item, f'{path}.{key}', str(key))
+                for key, item in value.items()
+            ],
+        }
+    if isinstance(value, list):
+        return {
+            'id': path,
+            'label': label,
+            'expand': True,
+            'children': [
+                _json_node(item, f'{path}.{index}', f'[{index}]')
+                for index, item in enumerate(value)
+            ],
+        }
+    return {'id': path, 'label': f'{label}: {value}'}
 
 
 def _primer_report(report):

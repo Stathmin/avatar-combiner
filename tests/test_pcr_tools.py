@@ -43,6 +43,13 @@ def test_circular_must_be_boolean():
         pcr_tools.simulate_pcr(TEMPLATE, FORWARD, REVERSE, circular='yes')
 
 
+def test_degenerate_primer_is_supported():
+    report = pcr_tools.simulate_pcr(TEMPLATE, 'GCTAAAGACRATTACATAAC', REVERSE)
+
+    assert report.length == 200
+    assert report.degenerate == 1
+
+
 def test_rna_template_is_rejected():
     with pytest.raises(tools.ToolError, match=r'unsupported base\(s\): U'):
         pcr_tools.simulate_pcr(TEMPLATE.replace('T', 'U', 1), FORWARD, REVERSE)
