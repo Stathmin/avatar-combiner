@@ -296,7 +296,7 @@ DNA, units, structure), then import/layout/PCR/XLSX.
 
 ## 7. Verification
 
-- `uv run pytest -q` → **80 passed**
+- `uv run pytest -q` → **82 passed**
 - `uv run ruff check src tests` → **clean**
 - Frozen build: `src/dist/avatar_combiner`, 62 MB, Web pages 200
 - UI integration tests: `tests/test_web_ui.py` (NiceGUI user simulation,
@@ -324,7 +324,7 @@ this table is the current state.
 
 ### Verification after remediation
 
-- `uv run pytest -q` → **80 passed**
+- `uv run pytest -q` → **82 passed**
 - `uv run ruff check src tests` → clean
 - Frozen run with workbook → exit 0, 8 result files + `manifest.json`
 - Frozen run with workbook removed → exit 1, **no** result folder
