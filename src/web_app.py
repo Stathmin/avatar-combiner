@@ -242,6 +242,7 @@ class State:
             sheets=sheets,
             data_range=app_config.parse_range(range_text),
         )
+        app_config.validate_config(config, self.base_dir)
         self.config = config
         self.error = None
         return config
@@ -340,6 +341,7 @@ def build_app(base_dir):
         current = str(state.config_path()) if state.config else None
         if current not in options:
             current = None
+        selected = {'path': current}
 
         with ui.card().classes('w-full panel'):
             ui.label(tr('workbook')).classes('text-lg font-bold')
@@ -347,12 +349,13 @@ def build_app(base_dir):
                 options,
                 value=current,
                 label=tr('excel_file'),
-            ).classes('w-96')
+            ).classes('w-96').mark('workbook')
             upload = ui.upload(
                 label=tr('upload_xlsx'),
                 auto_upload=True,
                 max_file_size=50_000_000,
-            )
+            ).props('accept=".xlsx,.xlsm"')
+            workbook_info = ui.label('').classes('text-xs opacity-70').mark('workbook_info')
 
         with ui.card().classes('w-full panel'):
             ui.label(tr('sheets')).classes('text-lg font-bold')
@@ -401,25 +404,33 @@ def build_app(base_dir):
                 select.update()
 
         def refresh_validation():
-            if not workbook_select.value:
+            path = selected.get('path')
+            if not path:
                 sheet_status.text = ''
+                workbook_info.text = ''
                 button.enabled = False
                 return
             try:
                 sheets = [value for value in current_sheets() if value]
-                state.apply(workbook_select.value, sheets, range_input.value)
+                state.apply(path, sheets, range_input.value)
             except (app_config.ConfigError, OSError, ValueError) as exc:
                 sheet_status.text = str(exc)
                 sheet_status.style('color: #b91c1c')
+                workbook_info.text = ''
                 button.enabled = False
                 return
             sheet_status.text = tr('selection_ready')
             sheet_status.style('color: #4d7c0f')
+            try:
+                workbook_info.text = app_config.workbook_summary(path, state.config)
+            except Exception:
+                workbook_info.text = ''
             button.enabled = True
 
         def on_workbook(event):
             if not event.value:
                 return
+            selected['path'] = event.value
             try:
                 state.apply(event.value, None, range_input.value)
             except (app_config.ConfigError, OSError, ValueError) as exc:
@@ -438,13 +449,17 @@ def build_app(base_dir):
             target = state.uploads / name
             target.write_bytes(await event.file.read())
             try:
-                state.config = app_config.build_config(
+                config = app_config.build_config(
                     state.base_dir, excel_file=target
                 )
-                state.error = None
+                app_config.validate_config(config, state.base_dir)
             except (app_config.ConfigError, OSError, ValueError) as exc:
-                ui.notify(str(exc), type='negative')
+                ui.notify(f'File rejected: {exc}', type='negative')
+                target.unlink(missing_ok=True)
                 return
+            state.config = config
+            state.error = None
+            selected['path'] = str(target)
             workbook_select.options = {
                 str(path): path.name for path in state.workbooks()
             }
@@ -452,7 +467,11 @@ def build_app(base_dir):
             workbook_select.update()
             load_sheets()
             refresh_validation()
-            ui.notify(f"{tr('uploaded')}: {name}", type='positive')
+            ui.notify(
+                f"{tr('uploaded')}: {name} · "
+                f"{app_config.workbook_summary(target, state.config)}",
+                type='positive',
+            )
 
         upload.on_upload(on_upload)
 
@@ -461,7 +480,9 @@ def build_app(base_dir):
                 ui.notify('a run is already in progress', type='warning')
                 return
             try:
-                excel = workbook_select.value
+                excel = selected.get('path')
+                if not excel:
+                    raise app_config.ConfigError('select a workbook first')
                 sheets = [value for value in current_sheets() if value]
                 config = state.apply(excel, sheets, range_input.value)
             except (app_config.ConfigError, OSError, ValueError) as exc:

@@ -157,14 +157,6 @@ def validate_config(config, base_dir=None, check_sheets=True):
     if len(set(names)) != 4:
         raise ConfigError('sheet names must be unique')
 
-    if check_sheets:
-        try:
-            available = sheet_names(path)
-        except Exception as exc:
-            raise ConfigError(f'cannot read {path.name}: {exc}') from exc
-        missing = [name for name in names if name not in available]
-        if missing:
-            raise ConfigError(f"sheet not found: {', '.join(missing)}")
 
     data_range = config.get('data_range')
     if not isinstance(data_range, dict):
@@ -189,15 +181,86 @@ def validate_config(config, base_dir=None, check_sheets=True):
         key: dict(sheets[key]) for key in PLATE_KEYS
     }
     normalized['data_range'] = normalized_range
+    defaults = {
+        'row_labels_col': 1,
+        'column_labels_row': 2,
+        'metadata_row': 1,
+    }
     for key in ('row_labels_col', 'column_labels_row', 'metadata_row'):
         try:
-            value = int(config.get(key, 1))
+            value = int(config.get(key, defaults[key]))
         except (TypeError, ValueError) as exc:
             raise ConfigError(f'{key} must be an integer') from exc
         if value < 1:
             raise ConfigError(f'{key} must be positive')
         normalized[key] = value
 
+    if check_sheets:
+        from openpyxl import load_workbook
+
+        try:
+            workbook = load_workbook(path)
+        except Exception as exc:
+            raise ConfigError(f'cannot read {path.name}: {exc}') from exc
+
+        try:
+            available = workbook.sheetnames
+            missing = [name for name in names if name not in available]
+            if missing:
+                raise ConfigError(f"sheet not found: {', '.join(missing)}")
+
+            for name in names:
+                sheet = workbook[name]
+                if sheet.max_row < normalized_range['end_row']:
+                    raise ConfigError(
+                        f'sheet {name}: range ends at row '
+                        f"{normalized_range['end_row']} but the sheet has "
+                        f'{sheet.max_row} rows'
+                    )
+                if sheet.max_column < normalized_range['end_col']:
+                    raise ConfigError(
+                        f'sheet {name}: range ends at column '
+                        f"{normalized_range['end_col']} but the sheet has "
+                        f'{sheet.max_column} columns'
+                    )
+
+                column_labels = [
+                    sheet.cell(row=normalized['column_labels_row'], column=column).value
+                    for column in range(
+                        normalized_range['start_col'], normalized_range['end_col'] + 1
+                    )
+                ]
+                if not any(value not in (None, '') for value in column_labels):
+                    raise ConfigError(
+                        f"sheet {name}: no column labels in row "
+                        f"{normalized['column_labels_row']}"
+                    )
+
+                row_labels = [
+                    sheet.cell(row=row, column=normalized['row_labels_col']).value
+                    for row in range(
+                        normalized_range['start_row'], normalized_range['end_row'] + 1
+                    )
+                ]
+                if not any(value not in (None, '') for value in row_labels):
+                    raise ConfigError(
+                        f"sheet {name}: no row labels in column "
+                        f"{normalized['row_labels_col']}"
+                    )
+
+                data = [
+                    sheet.cell(row=row, column=column).value
+                    for row in range(
+                        normalized_range['start_row'], normalized_range['end_row'] + 1
+                    )
+                    for column in range(
+                        normalized_range['start_col'], normalized_range['end_col'] + 1
+                    )
+                ]
+                if not any(value not in (None, '') for value in data):
+                    raise ConfigError(f'sheet {name}: data range is empty')
+        finally:
+            workbook.close()
     return normalized
 
 
@@ -221,6 +284,25 @@ def parse_range(text):
         'start_col': start_col,
         'end_col': end_col,
     }
+
+
+def workbook_summary(path, config):
+    """Return a short, human-readable description of the selected workbook."""
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(path)
+    try:
+        names = workbook.sheetnames
+        selected = [
+            config['sheets'][key]['sheet_name'] for key in PLATE_KEYS
+        ]
+        dims = []
+        for name in selected:
+            sheet = workbook[name]
+            dims.append(f'{name} {sheet.max_row}×{sheet.max_column}')
+        return f'{len(names)} sheets; ' + ', '.join(dims)
+    finally:
+        workbook.close()
 
 
 def _relative_name(path, base):

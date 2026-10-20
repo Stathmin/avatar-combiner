@@ -134,6 +134,49 @@ def _workbook(path, names):
     workbook.save(path)
 
 
+def test_sheet_without_labels_is_rejected(tmp_path):
+    path = tmp_path / 'jumbled.xlsx'
+    workbook = Workbook()
+    workbook.active.title = 'пл1'
+    for name in ('пл2', 'пл3', 'пл4'):
+        workbook.create_sheet(name)
+    sheet = workbook['пл1']
+    sheet.cell(row=10, column=13).value = 'stray value'
+    workbook.save(path)
+
+    config = app_config.build_config(tmp_path, excel_file=path)
+
+    with pytest.raises(app_config.ConfigError, match='column labels'):
+        app_config.validate_config(config, tmp_path)
+
+
+def test_range_beyond_sheet_is_rejected(tmp_path):
+    path = tmp_path / 'short.xlsx'
+    workbook = Workbook()
+    workbook.active.title = 'пл1'
+    for name in ('пл2', 'пл3', 'пл4'):
+        workbook.create_sheet(name)
+    for sheet in workbook.worksheets:
+        sheet.cell(row=5, column=13).value = 'x'
+    workbook.save(path)
+
+    config = app_config.build_config(tmp_path, excel_file=path)
+
+    with pytest.raises(app_config.ConfigError, match='ends at row'):
+        app_config.validate_config(config, tmp_path)
+
+
+def test_workbook_summary_describes_content(tmp_path):
+    workbook_in(tmp_path)
+    config = app_config.build_config(tmp_path)
+
+    summary = app_config.workbook_summary(tmp_path / 'plates.xlsx', config)
+
+    assert 'sheets' in summary
+    assert 'пл1' in summary
+    assert '×' in summary
+
+
 def test_existing_config_json_wins(tmp_path):
     workbook_in(tmp_path)
     config = {
