@@ -12,7 +12,9 @@ from pathlib import Path
 
 from tools import ToolError
 
-STRUCTURAL = frozenset({'well', 'well0', 'row', 'col', 'row_i', 'col_j'})
+STRUCTURAL = frozenset(
+    {'well', 'well0', 'row', 'col', 'row_i', 'col_j', 'path', 'plate'}
+)
 
 
 @dataclass(frozen=True)

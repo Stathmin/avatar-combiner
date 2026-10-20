@@ -21,11 +21,27 @@ def test_loads_two_well_layout(tmp_path):
     assert report.conditions == ('sample',)
 
 
+def test_meta_path_is_not_a_condition(tmp_path):
+    (tmp_path / 'plate.csv').write_text('', encoding='utf-8')
+    path = tmp_path / 'meta.toml'
+    write_toml(
+        path,
+        '[meta]\npath = "plate.csv"\n\n[well.A1]\nsample = "soy1"\n\n[well.B1]\nsample = "soy2"\n',
+    )
+
+    report = plate_layout.load_layout(path)
+
+    assert report.wells == 2
+    assert report.conditions == ('sample',)
+
+
 def test_invalid_well_is_wrapped(tmp_path):
     path = tmp_path / 'bad.toml'
     write_toml(path, '[well.ZZ]\nsample = "x"\n')
 
-    with pytest.raises(tools.ToolError, match='cannot read bad.toml'):
+    with pytest.raises(
+        tools.ToolError, match=r"cannot read bad\.toml: .*Cannot parse well 'ZZ'"
+    ):
         plate_layout.load_layout(path)
 
 
