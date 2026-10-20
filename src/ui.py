@@ -19,6 +19,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import run_pipeline
+import tools as genetics
 from run_pipeline import __version__, application_dir, next_result_number
 
 RESULT_PATTERN = run_pipeline.RESULT_DIR_PATTERN
@@ -92,10 +93,36 @@ TEXT = {
         'open_last': 'Open last result',
         'config': 'Config',
         'help': 'Help',
+        'tools': 'Genetics tools',
+        'tool_tm': 'Primer Tm',
+        'tool_pair': 'Primer pair',
+        'tool_dna': 'Complement / reverse complement',
+        'tool_units': 'Unit converter',
+        'tool_result': 'RESULT',
+        'tool_footer': '1 Tm  ·  2 pair  ·  3 DNA  ·  4 units  ·  B back',
+        'prompt_footer': 'Enter confirm  ·  Esc cancel  ·  Ctrl+U clear',
+        'sequence': 'Sequence',
+        'length': 'Length',
+        'gc': 'GC',
+        'tm': 'Tm',
+        'hairpin': 'Hairpin',
+        'homodimer': 'Homodimer',
+        'heterodimer': 'Heterodimer',
+        'end_stability': "3' end",
+        'forward': 'Forward',
+        'reverse_primer': 'Reverse',
+        'complement': 'Complement',
+        'reverse_seq': 'Reverse',
+        'reverse_complement': 'Reverse complement',
+        'quantity': 'Value',
+        'target_unit': 'Target unit',
+        'unit_hint': 'Example: 25 uM → nM. Empty target lists all units.',
+        'primer_hint': 'ACGT only. 18–25 nt recommended.',
+        'dna_hint': 'ACGTN / IUPAC accepted.',
         'language': 'Language',
         'quit': 'Quit',
         'back': 'Back',
-        'footer': 'R run  ·  D results  ·  O open  ·  C config  ·  H help  ·  L language  ·  Q quit',
+        'footer': 'R run  ·  D results  ·  O open  ·  C config  ·  T tools  ·  H help  ·  L language  ·  Q quit',
         'help_footer': 'L switch language  ·  B back  ·  Q quit',
         'config_footer': 'E edit config  ·  O open folder  ·  B back',
         'results_footer': '↑↓ select  ·  Enter/O open  ·  R run  ·  B back',
@@ -133,10 +160,36 @@ TEXT = {
         'open_last': 'Открыть последний',
         'config': 'Настройки',
         'help': 'Помощь',
+        'tools': 'Инструменты генетика',
+        'tool_tm': 'Tm праймера',
+        'tool_pair': 'Пара праймеров',
+        'tool_dna': 'Комплемент / обратный комплемент',
+        'tool_units': 'Конвертер единиц',
+        'tool_result': 'РЕЗУЛЬТАТ',
+        'tool_footer': '1 Tm  ·  2 пара  ·  3 ДНК  ·  4 единицы  ·  B назад',
+        'prompt_footer': 'Enter подтвердить  ·  Esc отмена  ·  Ctrl+U очистить',
+        'sequence': 'Последовательность',
+        'length': 'Длина',
+        'gc': 'GC',
+        'tm': 'Tm',
+        'hairpin': 'Шпилька',
+        'homodimer': 'Гомодимер',
+        'heterodimer': 'Гетеродимер',
+        'end_stability': "3' конец",
+        'forward': 'Прямой',
+        'reverse_primer': 'Обратный',
+        'complement': 'Комплемент',
+        'reverse_seq': 'Реверс',
+        'reverse_complement': 'Обратный комплемент',
+        'quantity': 'Значение',
+        'target_unit': 'Целевая единица',
+        'unit_hint': 'Пример: 25 uM → nM. Пустая цель — все единицы.',
+        'primer_hint': 'Только ACGT. Рекомендуется 18–25 нт.',
+        'dna_hint': 'Допускаются ACGTN / IUPAC.',
         'language': 'Язык',
         'quit': 'Выход',
         'back': 'Назад',
-        'footer': 'R запуск  ·  D результаты  ·  O открыть  ·  C настройки  ·  H помощь  ·  Q выход',
+        'footer': 'R запуск  ·  D результаты  ·  O открыть  ·  C настройки  ·  T инструменты  ·  H помощь  ·  Q выход',
         'help_footer': 'L сменить язык  ·  B назад  ·  Q выход',
         'config_footer': 'E открыть config  ·  O открыть папку  ·  B назад',
         'results_footer': '↑↓ выбор  ·  Enter/O открыть  ·  R запуск  ·  B назад',
@@ -167,17 +220,19 @@ HELP = {
         ('Run', 'Press R or Enter. A new «Результат N» folder is created and every output is written there.'),
         ('Outputs', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv and combined_384_plate_ids.txt.'),
         ('Config', 'config.json sets the Excel file and the four sheet names. Keep it next to the exe.'),
-        ('Quick keys', 'R run · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
+        ('Tools', 'Press T. Primer Tm and primer-pair checks come from Primer3. DNA complement and unit conversion are included.'),
+        ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
-        ('Size', 'Runtime uses only the Python standard library: no pandas, numpy or openpyxl.'),
+        ('Size', 'Small runtime: Bio.Seq for DNA, Pint for units, Primer3-py for thermodynamics. No pandas, NumPy, openpyxl, Rich or Textual in the bundle.'),
     ],
     'ru': [
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
         ('Результаты', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv и combined_384_plate_ids.txt.'),
         ('Настройка', 'config.json задаёт Excel-файл и имена четырёх листов. Держите его рядом с exe.'),
-        ('Быстрые клавиши', 'R запуск · D результаты · O открыть последний · C настройки · H помощь · L язык · Q quit. Стрелки — выбор, Enter — подтвердить.'),
+        ('Инструменты', 'Нажмите T. Tm и проверка пары праймеров — Primer3. Плюс комплемент ДНК и конвертер единиц.'),
+        ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
-        ('Размер', 'В рантайме только стандартная библиотека Python: без pandas, numpy и openpyxl.'),
+        ('Размер', 'Малый рантайм: Bio.Seq для ДНК, Pint для единиц, Primer3-py для термодинамики. Без pandas, NumPy, openpyxl, Rich и Textual в сборке.'),
     ],
 }
 
@@ -392,6 +447,10 @@ class Terminal:
             return 'ENTER'
         if first == b'\x03':
             return 'CTRL_C'
+        if first == b'\x15':
+            return 'CTRL_U'
+        if first == b'\x17':
+            return 'CTRL_W'
         if first in (b'\x7f', b'\x08'):
             return 'BACKSPACE'
         try:
@@ -417,6 +476,10 @@ class Terminal:
             return 'ESC'
         if char == '\x03':
             return 'CTRL_C'
+        if char == '\x15':
+            return 'CTRL_U'
+        if char == '\x17':
+            return 'CTRL_W'
         if char == '\x08':
             return 'BACKSPACE'
         return char
@@ -453,6 +516,7 @@ class App:
         self.run_result = None
         self.run_error = None
         self.run_elapsed = 0.0
+        self.tool_output = []
 
     @property
     def t(self):
@@ -482,8 +546,9 @@ class App:
         width, height = shutil.get_terminal_size((100, 30))
         width = max(60, min(width, 118))
         height = max(20, height)
+        self.paint_lines(self.render_screen(width, height), width, height)
 
-        lines = self.render_screen(width, height)
+    def paint_lines(self, lines, width, height):
         if len(lines) > height:
             lines = lines[:height]
         while len(lines) < height:
@@ -504,6 +569,8 @@ class App:
             return self.render_results(width, height)
         if self.screen == 'run':
             return self.render_run(width, height)
+        if self.screen == 'tools':
+            return self.render_tools(width, height)
         return self.render_home(width, height)
 
     def header(self, width):
@@ -594,6 +661,7 @@ class App:
             ('D', '2', self.t['results'], 'accent2'),
             ('O', '3', self.t['open_last'], 'accent'),
             ('C', '4', self.t['config'], 'muted'),
+            ('T', '7', self.t['tools'], 'accent2'),
             ('H', '5', self.t['help'], 'muted'),
             ('L', '6', f"{self.t['language']}: {self.lang.upper()}", 'warning'),
             ('Q', '0', self.t['quit'], 'error'),
@@ -700,6 +768,181 @@ class App:
         lines.append('')
         lines.extend(self.footer_lines(width, self.t['config_footer']))
         return lines
+
+    def render_tools(self, width, height):
+        lines = self.header(width)
+        lines.append('')
+        actions = [
+            self.theme.paint('[1]', 'accent', bold=True) + ' ' + self.t['tool_tm'],
+            self.theme.paint('[2]', 'accent', bold=True) + ' ' + self.t['tool_pair'],
+            self.theme.paint('[3]', 'accent2', bold=True) + ' ' + self.t['tool_dna'],
+            self.theme.paint('[4]', 'accent2', bold=True) + ' ' + self.t['tool_units'],
+            self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
+        ]
+        lines.extend(box(self.t['tools'], actions, width, self.theme))
+
+        if self.tool_output:
+            lines.append('')
+            lines.extend(box(self.t['tool_result'], self.tool_output, width, self.theme))
+
+        lines.append('')
+        lines.extend(self.footer_lines(width, self.t['tool_footer']))
+        return lines
+
+    def prompt_text(self, title, hint=None):
+        value = ''
+        while True:
+            width, height = shutil.get_terminal_size((100, 30))
+            width = max(60, min(width, 118))
+            height = max(20, height)
+
+            lines = self.header(width)
+            lines.append('')
+            field = self.theme.paint(value, 'accent', bold=True) + '▌'
+            lines.extend(box(title, [field], width, self.theme))
+            lines.append('')
+            footer = hint or ''
+            if footer:
+                footer += '  ·  '
+            lines.extend(
+                self.footer_lines(width, footer + self.t['prompt_footer'])
+            )
+            self.paint_lines(lines, width, height)
+
+            key = self.term.read_key()
+            if key in ('ESC', 'CTRL_C'):
+                return None
+            if key == 'ENTER':
+                return value.strip()
+            if key == 'BACKSPACE':
+                value = value[:-1]
+            elif key == 'CTRL_U':
+                value = ''
+            elif key == 'CTRL_W':
+                value = re.sub(r'\S+\s*$', '', value)
+            elif len(key) == 1 and key.isprintable() and len(value) < 120:
+                value += key
+
+    def tool_line(self, label, value, upper=True):
+        text = str(label).upper() if upper else str(label)
+        return self.theme.paint(text.ljust(12), 'dim') + ' ' + str(value)
+
+    def tool_thermo(self, label, result):
+        if not getattr(result, 'structure_found', False):
+            return self.tool_line(label, self.t['none'])
+        return self.tool_line(
+            label,
+            f'Tm {result.tm:.1f} °C · ΔG {result.dg / 1000.0:.2f} kcal/mol',
+        )
+
+    def tool_sequence_lines(self, label, sequence):
+        chunks = [sequence[i:i + 60] for i in range(0, len(sequence), 60)] or ['']
+        lines = [self.tool_line(label, chunks[0])]
+        for chunk in chunks[1:]:
+            lines.append(self.theme.paint(' ' * 13, 'dim') + chunk)
+        return lines
+
+    def set_tool_error(self, exc):
+        self.tool_output = [self.theme.paint(f'✗ {exc}', 'error')]
+
+    def tool_primer_tm(self):
+        self.tool_output = []
+        sequence = self.prompt_text(self.t['tool_tm'], self.t['primer_hint'])
+        if sequence is None:
+            return
+        try:
+            report = genetics.analyze_primer(sequence)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+        self.tool_output = [
+            self.tool_line(self.t['sequence'], report.sequence),
+            self.tool_line(self.t['length'], f'{report.length} nt'),
+            self.tool_line(self.t['gc'], f'{report.gc:.1f}%'),
+            self.tool_line(self.t['tm'], f'{report.tm:.1f} °C'),
+            self.tool_thermo(self.t['hairpin'], report.hairpin),
+            self.tool_thermo(self.t['homodimer'], report.homodimer),
+        ]
+
+    def tool_pair(self):
+        self.tool_output = []
+        forward = self.prompt_text(self.t['forward'], self.t['primer_hint'])
+        if forward is None:
+            return
+        reverse = self.prompt_text(self.t['reverse_primer'], self.t['primer_hint'])
+        if reverse is None:
+            return
+        try:
+            report = genetics.analyze_pair(forward, reverse)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+        self.tool_output = [
+            self.tool_line(
+                self.t['forward'],
+                f'{report.forward.sequence} · Tm {report.forward.tm:.1f} °C',
+            ),
+            self.tool_line(
+                self.t['reverse_primer'],
+                f'{report.reverse.sequence} · Tm {report.reverse.tm:.1f} °C',
+            ),
+            self.tool_line(
+                self.t['gc'],
+                f'F {report.forward.gc:.1f}% · R {report.reverse.gc:.1f}%',
+            ),
+            self.tool_line(
+                'ΔTm',
+                f'{abs(report.forward.tm - report.reverse.tm):.1f} °C',
+            ),
+            self.tool_thermo(self.t['heterodimer'], report.heterodimer),
+            self.tool_thermo(self.t['end_stability'], report.end_stability),
+        ]
+
+    def tool_dna(self):
+        self.tool_output = []
+        sequence = self.prompt_text(self.t['tool_dna'], self.t['dna_hint'])
+        if sequence is None:
+            return
+        try:
+            sequence = genetics.normalize_dna(sequence)
+            stats = {
+                'length': len(sequence),
+                'gc': genetics.gc_content(sequence),
+                'complement': genetics.complement(sequence),
+                'reverse': genetics.reverse(sequence),
+                'reverse_complement': genetics.reverse_complement(sequence),
+            }
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        self.tool_output = []
+        self.tool_output.extend(self.tool_sequence_lines(self.t['sequence'], sequence))
+        self.tool_output.append(self.tool_line(self.t['length'], f"{stats['length']} nt"))
+        self.tool_output.append(self.tool_line(self.t['gc'], f"{stats['gc']:.1f}%"))
+        self.tool_output.extend(self.tool_sequence_lines(self.t['complement'], stats['complement']))
+        self.tool_output.extend(self.tool_sequence_lines(self.t['reverse_seq'], stats['reverse']))
+        self.tool_output.extend(
+            self.tool_sequence_lines(self.t['reverse_complement'], stats['reverse_complement'])
+        )
+
+    def tool_units(self):
+        self.tool_output = []
+        value = self.prompt_text(self.t['quantity'], self.t['unit_hint'])
+        if value is None:
+            return
+        target = self.prompt_text(self.t['target_unit'], self.t['unit_hint'])
+        if target is None:
+            return
+        try:
+            results = genetics.convert_text(value, target)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+        self.tool_output = [
+            self.tool_line(unit, genetics.format_number(amount), upper=False)
+            for unit, amount in results
+        ]
 
     def render_results(self, width, height):
         lines = self.header(width)
@@ -810,7 +1053,7 @@ class App:
             self.screen = 'help'
             return
 
-        if key == 'ESC' and self.screen in ('help', 'config', 'results'):
+        if key == 'ESC' and self.screen in ('help', 'config', 'results', 'tools'):
             self.screen = 'home'
             return
 
@@ -828,6 +1071,8 @@ class App:
                 self.open_path(self.base_dir)
         elif self.screen == 'results':
             self.handle_results_key(key)
+        elif self.screen == 'tools':
+            self.handle_tools_key(key)
 
     def handle_home_key(self, key):
         if key in ('r', 'R', 'ENTER', '1'):
@@ -838,8 +1083,23 @@ class App:
             self.open_latest()
         elif key in ('c', 'C', '4'):
             self.screen = 'config'
+        elif key in ('t', 'T', '7'):
+            self.screen = 'tools'
+            self.tool_output = []
         elif key in ('h', 'H', '5'):
             self.screen = 'help'
+
+    def handle_tools_key(self, key):
+        if key in ('b', 'B'):
+            self.screen = 'home'
+        elif key == '1':
+            self.tool_primer_tm()
+        elif key == '2':
+            self.tool_pair()
+        elif key == '3':
+            self.tool_dna()
+        elif key == '4':
+            self.tool_units()
 
     def handle_results_key(self, key):
         if key in ('b', 'B'):

@@ -20,6 +20,16 @@ cd src
 uv run pyinstaller --onefile --optimize 2 \
   --name аватар_объединитель_4х_планшетов \
   --hidden-import ui \
+  --hidden-import tools \
+  --hidden-import primer3 \
+  --hidden-import primer3.thermoanalysis \
+  --hidden-import primer3.p3helpers \
+  --collect-binaries primer3 \
+  --collect-data primer3 \
+  --hidden-import Bio.Seq \
+  --hidden-import Bio.Data.IUPACData \
+  --hidden-import pint \
+  --collect-data pint \
   --hidden-import extract_plates_from_excel \
   --hidden-import combine_plates \
   run_pipeline.py
@@ -28,8 +38,8 @@ uv run pyinstaller --onefile --optimize 2 \
 Для Linux используйте имя без `.exe`, например `avatar_combiner`.
 
 `build_binary.py` дополнительно исключает `numpy`, `pandas`, `matplotlib`, `PIL`,
-`tkinter`, `setuptools` и тестовые пакеты. Runtime-зависимостей нет: используется
-только стандартная библиотека Python.
+`tkinter`, `setuptools` и тестовые пакеты. Библиотеки инструментов: `Bio.Seq`,
+`Pint` и `Primer3-py`. `NumPy` намеренно не включается в сборку.
 
 Если в системе есть `upx`, скрипт автоматически включает сжатие. UPX может вызывать
 ложные срабатывания антивируса, поэтому это опция, а не требование.
@@ -57,8 +67,8 @@ dist\аватар_объединитель_4х_планшетов.exe
 
 ### Быстрые клавиши
 
-`R` запуск · `D` результаты · `O` открыть последний · `C` настройки ·
-`H` помощь · `L` язык · `Q` выход.
+`R` запуск · `T` инструменты · `D` результаты · `O` открыть последний ·
+`C` настройки · `H` помощь · `L` язык · `Q` выход.
 
 Для запуска без интерфейса:
 

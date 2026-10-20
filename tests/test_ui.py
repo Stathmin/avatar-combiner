@@ -48,6 +48,7 @@ def test_home_shows_hotkeys_and_next_folder(tmp_path):
     text = plain(app.render_home(100, 30))
 
     assert '[R]' in text
+    assert '[T]' in text
     assert '[L]' in text
     assert 'Результат 2' in text
     assert 'READY' in text
@@ -78,3 +79,24 @@ def test_language_toggle_and_navigation(tmp_path):
 
     app.handle_key('c')
     assert app.screen == 'config'
+
+
+def test_unit_labels_preserve_case(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    assert 'nM' in plain([app.tool_line('nM', '25000', upper=False)])
+    assert 'NM' in plain([app.tool_line('nM', '25000')])
+
+
+def test_tools_screen_and_navigation(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    app.handle_key('t')
+    assert app.screen == 'tools'
+
+    text = plain(app.render_tools(100, 30))
+    assert '[1]' in text
+    assert '[4]' in text
+
+    app.handle_key('b')
+    assert app.screen == 'home'

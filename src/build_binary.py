@@ -30,7 +30,7 @@ def check_pyinstaller():
 
 def check_dependencies():
     """Проверяет runtime-зависимости."""
-    print("✓ Runtime dependencies: Python standard library only")
+    print("✓ Runtime: Bio.Seq, Pint, Primer3-py")
     return True
 
 
@@ -68,6 +68,16 @@ def build_binary():
         '--hidden-import', 'extract_plates_from_excel',
         '--hidden-import', 'combine_plates',
         '--hidden-import', 'ui',
+        '--hidden-import', 'tools',
+        '--hidden-import', 'primer3',
+        '--hidden-import', 'primer3.thermoanalysis',
+        '--hidden-import', 'primer3.p3helpers',
+        '--collect-binaries', 'primer3',
+        '--collect-data', 'primer3',
+        '--hidden-import', 'Bio.Seq',
+        '--hidden-import', 'Bio.Data.IUPACData',
+        '--hidden-import', 'pint',
+        '--collect-data', 'pint',
         # Исключаем ненужные модули для уменьшения размера
         '--exclude-module', 'matplotlib',
         '--exclude-module', 'numpy',
@@ -83,7 +93,6 @@ def build_binary():
         '--exclude-module', 'asyncio',
         '--exclude-module', 'concurrent',
         '--exclude-module', 'multiprocessing',
-        '--exclude-module', 'email',
         '--exclude-module', 'http',
         '--exclude-module', 'urllib',
         '--exclude-module', 'ssl',
@@ -95,6 +104,36 @@ def build_binary():
         '--exclude-module', 'wsgiref',
         '--exclude-module', 'webbrowser',
         '--exclude-module', 'xml.dom',
+        # Biopython: only Bio.Seq and IUPACData are used
+        '--exclude-module', 'Bio.Align',
+        '--exclude-module', 'Bio.AlignIO',
+        '--exclude-module', 'Bio.PDB',
+        '--exclude-module', 'Bio.Nexus',
+        '--exclude-module', 'Bio.GenBank',
+        '--exclude-module', 'Bio.bgzf',
+        '--exclude-module', 'Bio.File',
+        '--exclude-module', 'Bio.SeqIO',
+        '--exclude-module', 'Bio.SeqRecord',
+        '--exclude-module', 'Bio.SeqUtils',
+        '--exclude-module', 'Bio.Phylo',
+        '--exclude-module', 'Bio.Blast',
+        '--exclude-module', 'Bio.Entrez',
+        '--exclude-module', 'Bio.ExPASy',
+        '--exclude-module', 'Bio.KEGG',
+        '--exclude-module', 'Bio.Medline',
+        '--exclude-module', 'Bio.PopGen',
+        '--exclude-module', 'Bio.SCOP',
+        '--exclude-module', 'Bio.SwissProt',
+        '--exclude-module', 'Bio.TogoWS',
+        '--exclude-module', 'Bio.UniGene',
+        '--exclude-module', 'Bio.UniProt',
+        '--exclude-module', 'Bio.codonalign',
+        '--exclude-module', 'Bio.motifs',
+        '--exclude-module', 'Bio.pairwise2',
+        '--exclude-module', 'Bio.phenotype',
+        '--exclude-module', 'Bio.restriction',
+        '--exclude-module', 'Bio.SearchIO',
+        '--exclude-module', 'BioSQL',
         script_name
     ]
 
