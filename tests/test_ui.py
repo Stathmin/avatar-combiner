@@ -1,13 +1,17 @@
 import json
+import shutil
 from pathlib import Path
 
 import pcr_tools
 import ui
 
+WORKBOOK = Path(__file__).resolve().parents[1] / 'src' / 'планшеты соя пробелы.xlsx'
+
 
 def make_app(tmp_path, lang='en'):
     app = ui.App(lang=lang)
     app.base_dir = tmp_path
+    app.reload_config()
     app.result_entries = app._load_results()
     app.result_index = max(0, len(app.result_entries) - 1)
     return app
@@ -102,6 +106,69 @@ def test_tools_screen_and_navigation(tmp_path):
 
     app.handle_key('b')
     assert app.screen == 'home'
+
+
+def test_home_auto_detects_workbook(tmp_path):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+
+    text = plain(app.render_home(100, 30))
+
+    assert 'plates.xlsx' in text
+    assert 'Excel file not found' not in text
+
+
+def test_config_screen_offers_file_sheets_and_range(tmp_path):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+
+    text = plain(app.render_config(100, 30))
+
+    assert 'plates.xlsx' in text
+    assert '[F]' in text and '[S]' in text and '[R]' in text
+    assert 'config.json' not in text
+
+
+def test_edit_sheets_reorders_selection(tmp_path, monkeypatch):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: 'пл2, пл1, пл4, пл3')
+
+    app.edit_sheets()
+
+    assert [item['sheet_name'] for item in app.config['sheets'].values()] == [
+        'пл2',
+        'пл1',
+        'пл4',
+        'пл3',
+    ]
+
+
+def test_edit_range_updates_config(tmp_path, monkeypatch):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: 'B4:M9')
+
+    app.edit_range()
+
+    assert app.config['data_range']['start_row'] == 4
+    assert app.config['data_range']['end_row'] == 9
+
+
+def test_run_passes_runtime_config(tmp_path, monkeypatch):
+    shutil.copy(WORKBOOK, tmp_path / 'plates.xlsx')
+    app = make_app(tmp_path)
+    seen = {}
+    monkeypatch.setattr(app, 'draw', lambda: None)
+    monkeypatch.setattr(
+        ui.run_pipeline,
+        'run',
+        lambda **kwargs: seen.update(kwargs) or Path('Результат 1'),
+    )
+
+    app.do_run()
+
+    assert seen['config'] is app.config
 
 
 def test_footer_keeps_shortcut_items_whole(tmp_path):

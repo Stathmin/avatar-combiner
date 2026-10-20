@@ -19,7 +19,6 @@ OUTPUT_FILES = (
 
 
 def prepare_input(tmp_path):
-    shutil.copy(SRC / "config.json", tmp_path / "config.json")
     shutil.copy(SRC / "планшеты соя пробелы.xlsx", tmp_path / "планшеты соя пробелы.xlsx")
 
 

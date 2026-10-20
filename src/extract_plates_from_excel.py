@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Извлечение данных планшетов из Excel файла в CSV формат.
-Читает конфигурацию из config.json и генерирует CSV файлы для каждого планшета.
+Принимает готовый config от UI или читает config.json в CLI-режиме.
 """
 
 import csv
@@ -131,15 +131,16 @@ def save_metadata_csv(metadata_dict, output_file='metadata.csv', log=print):
     log(f"Создан файл метаданных: {output_file}")
 
 
-def main(config_path='config.json', output_dir=None, base_dir=None, log=print):
+def main(config_path='config.json', output_dir=None, base_dir=None, log=print, config=None):
     """Основная функция."""
     config_path = Path(config_path)
     base_dir = Path(base_dir) if base_dir else config_path.parent
     output_dir = Path(output_dir) if output_dir else base_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Читаем конфигурацию
-    config = read_config(config_path)
+    # Готовый config передаёт UI; CLI читает config.json.
+    if config is None:
+        config = read_config(config_path)
     
     excel_file = Path(config['excel_file'])
     if not excel_file.is_absolute():

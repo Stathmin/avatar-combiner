@@ -12,6 +12,7 @@ from pathlib import Path
 
 # Импортируем функции из других модулей
 try:
+    import app_config
     import combine_plates
     import extract_plates_from_excel
 except ImportError as e:
@@ -74,8 +75,13 @@ def read_config(config_path='config.json'):
         sys.exit(1)
 
 
-def run(base_dir=None, log=print):
-    """Выполняет пайплайн и пишет все результаты в новую папку «Результат N»."""
+def run(base_dir=None, log=print, config=None):
+    """Выполняет пайплайн и пишет все результаты в новую папку «Результат N».
+
+    ``config`` можно передать готовым словарём — тогда config.json не нужен.
+    Без него читается config.json, а если его нет, файл Excel и листы
+    определяются автоматически.
+    """
     base_dir = Path(base_dir) if base_dir else application_dir()
     config_path = base_dir / 'config.json'
 
@@ -83,8 +89,14 @@ def run(base_dir=None, log=print):
     log("Мастер-скрипт обработки планшетов")
     log("=" * 60)
 
-    # Читаем конфигурацию
-    config = read_config(config_path)
+    if config is None:
+        if config_path.exists():
+            config = read_config(config_path)
+        else:
+            config, config_error, _source = app_config.load_config(base_dir)
+            if config_error:
+                print(f"Ошибка: {config_error}", file=sys.stderr)
+                sys.exit(1)
 
     excel_file = config.get('excel_file')
     excel_path = None
@@ -111,6 +123,7 @@ def run(base_dir=None, log=print):
                 config_path=config_path,
                 output_dir=result_dir,
                 base_dir=base_dir,
+                config=config,
                 log=log,
             )
             extracted = True

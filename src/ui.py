@@ -6,7 +6,6 @@ semantic roles → components/screens.
 """
 
 import io
-import json
 import os
 import re
 import select
@@ -18,6 +17,7 @@ import time
 from contextlib import redirect_stderr
 from pathlib import Path
 
+import app_config
 import pcr_tools
 import plate_layout
 import report_xlsx
@@ -158,7 +158,7 @@ TEXT = {
         'back': 'Back',
         'footer': 'R run  ·  D results  ·  O open  ·  C config  ·  T tools  ·  H help  ·  L language  ·  Q quit',
         'help_footer': 'L switch language  ·  B back  ·  Q quit',
-        'config_footer': 'E edit config  ·  O open folder  ·  B back',
+        'config_footer': 'F file · S sheets · R range · O folder · B back',
         'results_footer': '↑↓ select  ·  Enter/O open  ·  R run  ·  B back',
         'no_results': 'No result folders yet. Press R to run.',
         'run_hint': 'Each run creates a new «Результат N» folder.',
@@ -167,11 +167,16 @@ TEXT = {
         'error': 'ERROR',
         'press_any': 'Press any key to return',
         'open_folder': 'Open program folder',
-        'edit_config': 'Open config.json',
         'range': 'Range',
         'opened': 'Opened',
         'open_failed': 'Could not open',
-        'config_missing': 'config.json not found',
+        'config_missing': 'Excel file not found',
+        'choose_excel': 'Excel file',
+        'choose_sheets': 'Sheets',
+        'choose_range': 'Data range',
+        'excel_hint': 'Path to .xlsx or .xlsm',
+        'sheets_hint': 'Four names, comma-separated',
+        'range_hint': 'Example: B3:M10',
         'files': 'files',
         'folder': 'Folder',
         'run_result': 'Result',
@@ -254,7 +259,7 @@ TEXT = {
         'back': 'Назад',
         'footer': 'R запуск  ·  D результаты  ·  O открыть  ·  C настройки  ·  T инструменты  ·  H помощь  ·  Q выход',
         'help_footer': 'L сменить язык  ·  B назад  ·  Q выход',
-        'config_footer': 'E открыть config  ·  O открыть папку  ·  B назад',
+        'config_footer': 'F файл · S листы · R диапазон · O папка · B назад',
         'results_footer': '↑↓ выбор  ·  Enter/O открыть  ·  R запуск  ·  B назад',
         'no_results': 'Папок результатов пока нет. Нажмите R.',
         'run_hint': 'Каждый запуск создаёт новую папку «Результат N».',
@@ -263,11 +268,16 @@ TEXT = {
         'error': 'ОШИБКА',
         'press_any': 'Нажмите любую клавишу',
         'open_folder': 'Открыть папку программы',
-        'edit_config': 'Открыть config.json',
         'range': 'Диапазон',
         'opened': 'Открыто',
         'open_failed': 'Не удалось открыть',
-        'config_missing': 'config.json не найден',
+        'config_missing': 'Excel-файл не найден',
+        'choose_excel': 'Excel-файл',
+        'choose_sheets': 'Листы',
+        'choose_range': 'Диапазон',
+        'excel_hint': 'Путь к .xlsx или .xlsm',
+        'sheets_hint': 'Четыре имени через запятую',
+        'range_hint': 'Пример: B3:M10',
         'files': 'файлов',
         'folder': 'Папка',
         'run_result': 'Результат',
@@ -282,7 +292,7 @@ HELP = {
     'en': [
         ('Run', 'Press R or Enter. A new «Результат N» folder is created and every output is written there.'),
         ('Outputs', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv and combined_384_plate_ids.txt.'),
-        ('Config', 'config.json sets the Excel file and the four sheet names. Keep it next to the exe.'),
+        ('Config', 'Press C. The workbook is found automatically; F chooses the file, S the four sheets, R the data range. No config file to edit.'),
         ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, import GenBank, SnapGene and FASTA files, and export results to XLSX.'),
         ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
@@ -291,7 +301,7 @@ HELP = {
     'ru': [
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
         ('Результаты', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv и combined_384_plate_ids.txt.'),
-        ('Настройка', 'config.json задаёт Excel-файл и имена четырёх листов. Держите его рядом с exe.'),
+        ('Настройка', 'Нажмите C. Файл Excel находится автоматически; F — выбрать файл, S — четыре листа, R — диапазон. Править конфиг не нужно.'),
         ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, импорт GenBank, SnapGene и FASTA, экспорт результатов в XLSX.'),
         ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
@@ -618,10 +628,20 @@ class App:
         self.run_error = None
         self.run_elapsed = 0.0
         self.tool_output = []
+        self.config = None
+        self.config_error = None
+        self.config_source = 'auto'
+        self.reload_config()
 
     @property
     def t(self):
         return TEXT[self.lang]
+
+    def reload_config(self):
+        """Load config.json when present, otherwise auto-detect the workbook."""
+        self.config, self.config_error, self.config_source = app_config.load_config(
+            self.base_dir
+        )
 
     def run(self):
         _enable_windows_ansi()
@@ -706,16 +726,16 @@ class App:
         return lines
 
     def status_box(self, width):
-        config, error = self._load_config()
+        config, error = self.config, self.config_error
         inner = width - 4
 
-        if error:
+        if error or not config:
             excel = self.theme.paint(self.t['config_missing'], 'error')
             sheets = '—'
         else:
             excel_name = config.get('excel_file', '—')
-            excel_path = self.base_dir / excel_name
-            if excel_path.exists():
+            excel_path = self.excel_path()
+            if excel_path and excel_path.exists():
                 excel = (
                     self.theme.paint('✓', 'success')
                     + ' '
@@ -833,16 +853,19 @@ class App:
         lines = self.header(width)
         lines.append('')
         inner = width - 4
-        config, error = self._load_config()
+        config, error = self.config, self.config_error
 
-        if error:
-            body = [self.theme.paint(self.t['config_missing'], 'error'), self.theme.paint(error, 'dim')]
+        if error or not config:
+            body = [
+                self.theme.paint(self.t['config_missing'], 'error'),
+                self.theme.paint(error or '', 'dim'),
+            ]
         else:
             excel_name = config.get('excel_file', '—')
-            excel_path = self.base_dir / excel_name
+            excel_path = self.excel_path()
             excel_value = (
                 self.theme.paint('✓ ', 'success')
-                if excel_path.exists()
+                if excel_path and excel_path.exists()
                 else self.theme.paint('✗ ', 'error')
             ) + excel_name
             sheets = ' · '.join(
@@ -851,7 +874,6 @@ class App:
             ) or '—'
             body = [
                 self.label_value(self.t['folder'], self.base_dir, inner),
-                self.label_value(self.t['config'], self.base_dir / 'config.json', inner),
                 self.label_value(self.t['excel'], excel_value, inner),
                 self.label_value(self.t['sheets'], sheets, inner),
                 self.label_value(self.t['range'], self.range_text(config), inner),
@@ -861,7 +883,9 @@ class App:
         lines.append('')
 
         actions = [
-            self.theme.paint('[E]', 'accent', bold=True) + ' ' + self.t['edit_config'],
+            self.theme.paint('[F]', 'accent', bold=True) + ' ' + self.t['choose_excel'],
+            self.theme.paint('[S]', 'accent', bold=True) + ' ' + self.t['choose_sheets'],
+            self.theme.paint('[R]', 'accent', bold=True) + ' ' + self.t['choose_range'],
             self.theme.paint('[O]', 'accent', bold=True) + ' ' + self.t['open_folder'],
             self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
         ]
@@ -1336,8 +1360,12 @@ class App:
         elif self.screen == 'config':
             if key in ('b', 'B'):
                 self.screen = 'home'
-            elif key in ('e', 'E', 'ENTER'):
-                self.open_config()
+            elif key in ('f', 'F', 'e', 'E', 'ENTER'):
+                self.edit_excel()
+            elif key in ('s', 'S'):
+                self.edit_sheets()
+            elif key in ('r', 'R'):
+                self.edit_range()
             elif key in ('o', 'O'):
                 self.open_path(self.base_dir)
         elif self.screen == 'results':
@@ -1395,6 +1423,10 @@ class App:
             self.do_run()
 
     def do_run(self):
+        if not self.config:
+            self.notice = (self.config_error or self.t['config_missing'], 'error')
+            return
+
         self.screen = 'run'
         self.run_state = 'running'
         self.progress = []
@@ -1409,7 +1441,11 @@ class App:
 
         try:
             with redirect_stderr(error_buffer):
-                result = run_pipeline.run(base_dir=self.base_dir, log=self.on_log)
+                result = run_pipeline.run(
+                    base_dir=self.base_dir,
+                    config=self.config,
+                    log=self.on_log,
+                )
             self.run_result = result
             self.run_state = 'done'
             self.notice = (f"{self.t['last']}: {result.name}", 'success')
@@ -1468,12 +1504,75 @@ class App:
         if self.result_entries:
             self.open_path(self.result_entries[self.result_index]['path'])
 
-    def open_config(self):
-        config_path = self.base_dir / 'config.json'
-        if config_path.exists():
-            self.open_path(config_path)
-        else:
-            self.notice = (self.t['config_missing'], 'warning')
+    def excel_path(self):
+        if not self.config:
+            return None
+        path = Path(self.config.get('excel_file', ''))
+        return path if path.is_absolute() else self.base_dir / path
+
+    def edit_excel(self):
+        path = self.prompt_text(self.t['choose_excel'], self.t['excel_hint'])
+        if path is None:
+            return
+        try:
+            config = app_config.build_config(self.base_dir, excel_file=path)
+        except Exception as exc:
+            self.notice = (str(exc), 'error')
+            return
+        self.config = config
+        self.config_error = None
+        self.notice = (f"{self.t['excel']}: {config['excel_file']}", 'success')
+
+    def edit_sheets(self):
+        if not self.config:
+            self.notice = (self.t['config_missing'], 'error')
+            return
+        try:
+            available = app_config.sheet_names(self.excel_path())
+        except Exception as exc:
+            self.notice = (str(exc), 'error')
+            return
+
+        text = self.prompt_text(self.t['choose_sheets'], ', '.join(available))
+        if text is None:
+            return
+        names = [
+            name.strip()
+            for name in (text.split(',') if ',' in text else text.split())
+            if name.strip()
+        ]
+        try:
+            config = app_config.build_config(
+                self.base_dir,
+                excel_file=self.excel_path(),
+                sheets=names,
+                data_range=self.config.get('data_range'),
+            )
+        except Exception as exc:
+            self.notice = (str(exc), 'error')
+            return
+
+        self.config = config
+        self.config_error = None
+        self.notice = (f"{self.t['sheets']}: {', '.join(names)}", 'success')
+
+    def edit_range(self):
+        if not self.config:
+            self.notice = (self.t['config_missing'], 'error')
+            return
+        text = self.prompt_text(self.t['choose_range'], self.range_text(self.config))
+        if text is None:
+            return
+        try:
+            data_range = app_config.parse_range(text)
+        except Exception as exc:
+            self.notice = (str(exc), 'error')
+            return
+
+        config = dict(self.config)
+        config['data_range'] = data_range
+        self.config = config
+        self.notice = (f"{self.t['range']}: {self.range_text(config)}", 'success')
 
     def open_path(self, path):
         path = Path(path)
@@ -1524,14 +1623,6 @@ class App:
             )
         entries.sort(key=lambda entry: entry['number'])
         return entries
-
-    def _load_config(self):
-        path = self.base_dir / 'config.json'
-        try:
-            with open(path, encoding='utf-8') as config_file:
-                return json.load(config_file), None
-        except (OSError, json.JSONDecodeError) as exc:
-            return None, str(exc)
 
     def range_text(self, config):
         data_range = config.get('data_range', {})
