@@ -42,10 +42,12 @@ uv run pyinstaller --onefile --optimize 1 \
 Для Linux используйте имя без `.exe`, например `avatar_combiner`.
 
 `build_binary.py` исключает тесты `pandas`, `tkinter`, `setuptools` и часть
-необязательных модулей. `matplotlib` входит в сборку, потому что его
-импортирует `wellmap`. Библиотеки инструментов: `Bio.Seq`/`SeqIO`, `Pint`,
-`Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas` и
-`openpyxl`.
+необязательных модулей. `matplotlib` и `Pillow` не входят в сборку: `plate_layout`
+загружает только `wellmap.file`. Библиотеки инструментов: `Bio.Seq`/`SeqIO`,
+`Pint`, `Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas`,
+`openpyxl` и `NiceGUI` для веб-интерфейса.
+
+Веб-интерфейс включается флагом `--web` (по умолчанию `http://127.0.0.1:8080`).
 
 PyInstaller применяет UPX только на Windows; на Linux он отключён из-за проблем совместимости. UPX может вызывать
 ложные срабатывания антивируса, поэтому это опция, а не требование.

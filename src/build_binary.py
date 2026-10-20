@@ -87,6 +87,8 @@ def build_binary():
         '--hidden-import', 'plate_layout',
         '--hidden-import', 'pcr_tools',
         '--hidden-import', 'report_xlsx',
+        '--hidden-import', 'web_app',
+        '--collect-all', 'nicegui',
         '--collect-all', 'seqfold',
         '--hidden-import', 'snapgene_reader',
         '--hidden-import', 'xmltodict',
@@ -127,24 +129,18 @@ def build_binary():
         '--exclude-module', 'matplotlib',
         '--exclude-module', 'PIL',
         '--exclude-module', 'wellmap.plot',
-        # Not used by the offline tools; tested by the import-blocker test.
-        '--exclude-module', 'ssl',
-        '--exclude-module', '_ssl',
-        '--exclude-module', 'sqlite3',
         '--exclude-module', 'tkinter',
         '--exclude-module', 'pytest',
         '--exclude-module', 'ruff',
         '--exclude-module', 'pip',
         '--exclude-module', 'setuptools',
         '--exclude-module', 'pkg_resources',
-        '--exclude-module', 'asyncio',
-        '--exclude-module', 'multiprocessing',
         '--exclude-module', 'xmlrpc',
         '--exclude-module', 'pydoc',
         '--exclude-module', 'pdb',
         '--exclude-module', 'doctest',
         '--exclude-module', 'wsgiref',
-        '--exclude-module', 'webbrowser',
+        # NiceGUI imports webbrowser to open the local UI.
         script_name
     ]
 

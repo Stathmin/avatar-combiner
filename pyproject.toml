@@ -14,11 +14,13 @@ dependencies = [
     "openpyxl>=3.1.5",
     "wellmap>=3.5.2",
     "pydna>=5.5.16",
+    "nicegui>=3.18.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.5",
 ]
 build = [
@@ -28,6 +30,9 @@ build = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+main_file = ""
+markers = ["nicegui_main_file: main file for NiceGUI user-simulation tests"]
 
 [tool.ruff]
 line-length = 100

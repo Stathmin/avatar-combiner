@@ -296,18 +296,20 @@ HELP = {
         ('Outputs', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv and combined_384_plate_ids.txt.'),
         ('Config', 'Press C. The workbook is found automatically; F chooses the file, S the four sheets, R the data range. No config file to edit.'),
         ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, import GenBank, SnapGene and FASTA files, and export results to XLSX.'),
+        ('Web', 'Run with --web to open a local web UI: file and sheet selection, live log, results and genetics tools. The server listens on 127.0.0.1 only.'),
         ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
-        ('Size', 'Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas and openpyxl. The bundle still excludes tests and optional modules; matplotlib is included because wellmap imports it.'),
+        ('Size', 'Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas, openpyxl and NiceGUI for the local web UI; matplotlib is not bundled.'),
     ],
     'ru': [
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
         ('Результаты', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv и combined_384_plate_ids.txt.'),
         ('Настройка', 'Нажмите C. Файл Excel находится автоматически; F — выбрать файл, S — четыре листа, R — диапазон. Править конфиг не нужно.'),
         ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, импорт GenBank, SnapGene и FASTA, экспорт результатов в XLSX.'),
+        ('Веб', 'Запустите с --web: локальный веб-интерфейс с выбором файла и листов, живым логом, результатами и инструментами. Сервер слушает только 127.0.0.1.'),
         ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
-        ('Размер', 'Рантайм: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas и openpyxl. В сборке по-прежнему исключены тесты и необязательные модули; matplotlib включён, потому что его импортирует wellmap.'),
+        ('Размер', 'Рантайм: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas, openpyxl и NiceGUI для веб-интерфейса; matplotlib в сборку не входит.'),
     ],
 }
 

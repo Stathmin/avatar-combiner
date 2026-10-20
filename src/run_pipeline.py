@@ -208,6 +208,9 @@ def main(argv=None):
     )
     parser.add_argument('--no-ui', action='store_true', help='run without the terminal UI')
     parser.add_argument('--ui', action='store_true', help='force the terminal UI')
+    parser.add_argument('--web', action='store_true', help='start the local web UI')
+    parser.add_argument('--port', type=int, default=8080, help='web UI port (default 8080)')
+    parser.add_argument('--no-browser', action='store_true', help='do not open a browser')
     parser.add_argument('--lang', choices=('en', 'ru'), help='UI language: en or ru')
     parser.add_argument('--version', action='store_true', help='show version and exit')
     parser.add_argument('-h', '--help', action='help', help='show this help and exit')
@@ -215,6 +218,16 @@ def main(argv=None):
 
     if args.version:
         print(f'avatar_combiner {__version__}')
+        return 0
+
+    if args.web:
+        import web_app
+
+        web_app.main(
+            base_dir=application_dir(),
+            port=args.port,
+            show=not args.no_browser,
+        )
         return 0
 
     interactive = _is_interactive()
