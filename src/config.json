@@ -1,0 +1,27 @@
+{
+  "excel_file": "планшеты соя пробелы.xlsx",
+  "sheets": {
+    "plate1": {
+      "sheet_name": "пл1"
+    },
+    "plate2": {
+      "sheet_name": "пл2"
+    },
+    "plate3": {
+      "sheet_name": "пл3"
+    },
+    "plate4": {
+      "sheet_name": "пл5"
+    }
+  },
+  "data_range": {
+    "start_row": 3,
+    "end_row": 10,
+    "start_col": 2,
+    "end_col": 13
+  },
+  "row_labels_col": 1,
+  "column_labels_row": 2,
+  "metadata_row": 1
+}
+

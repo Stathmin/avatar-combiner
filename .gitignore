@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+build/
+dist/
+*.spec
+**/Результат [0-9]*/
+
+# Generated pipeline output
+src/plate[1-4].csv
+src/metadata.csv
+src/combined_384_plate.csv
+src/combined_384_plate_pivot.csv
+src/combined_384_plate_ids.txt
