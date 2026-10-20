@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -73,11 +74,38 @@ def test_parse_range_rejects_garbage():
         app_config.parse_range('not-a-range')
 
 
-def test_existing_config_json_wins(tmp_path):
-    (tmp_path / 'config.json').write_text('{"excel_file": "x.xlsx"}', encoding='utf-8')
+def test_config_missing_range_is_rejected(tmp_path):
+    workbook_in(tmp_path)
+    config = {
+        'excel_file': 'plates.xlsx',
+        'sheets': {
+            'plate1': {'sheet_name': 'пл1'},
+            'plate2': {'sheet_name': 'пл2'},
+            'plate3': {'sheet_name': 'пл3'},
+            'plate4': {'sheet_name': 'пл4'},
+        },
+    }
 
-    config, error, source = app_config.load_config(tmp_path)
+    with pytest.raises(app_config.ConfigError, match='data_range'):
+        app_config.validate_config(config, tmp_path)
+
+
+def test_existing_config_json_wins(tmp_path):
+    workbook_in(tmp_path)
+    config = {
+        'excel_file': 'plates.xlsx',
+        'sheets': {
+            'plate1': {'sheet_name': 'пл1'},
+            'plate2': {'sheet_name': 'пл2'},
+            'plate3': {'sheet_name': 'пл3'},
+            'plate4': {'sheet_name': 'пл4'},
+        },
+        'data_range': app_config.DEFAULT_RANGE,
+    }
+    (tmp_path / 'config.json').write_text(json.dumps(config), encoding='utf-8')
+
+    loaded, error, source = app_config.load_config(tmp_path)
 
     assert error is None
     assert source == 'config.json'
-    assert config == {'excel_file': 'x.xlsx'}
+    assert loaded['sheets']['plate1']['sheet_name'] == 'пл1'

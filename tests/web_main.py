@@ -12,4 +12,4 @@ from nicegui import ui
 import web_app
 
 web_app.build_app(Path(os.environ['AVATAR_WEB_BASE']))
-ui.run(reload=False, show=False)
+ui.run(reload=False, show=False, storage_secret='test-secret')

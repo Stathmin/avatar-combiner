@@ -86,16 +86,17 @@ async def test_units_tool_produces_output(user: User):
 
 
 async def test_language_switch(user: User):
-    import web_app
+    await user.open('/')
+    user.find('RU').click()
 
-    try:
-        web_app.LANG['code'] = 'ru'
-        await user.open('/')
-        await user.should_see('Пайплайн')
-        await user.should_see('Tm праймера')
-        await user.should_see('Запустить')
-    finally:
-        web_app.LANG['code'] = 'en'
+    await user.open('/')
+    await user.should_see('Пайплайн')
+    await user.should_see('Tm праймера')
+    await user.should_see('Запустить')
+
+    user.find('EN').click()
+    await user.open('/')
+    await user.should_see('Pipeline')
 
 
 async def test_run_from_web(user: User):

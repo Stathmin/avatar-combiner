@@ -175,14 +175,11 @@ TEXT = {
         'choose_sheets': 'Sheets',
         'choose_range': 'Data range',
         'excel_hint': 'Path to .xlsx or .xlsm',
-        'sheets_hint': 'Four names, comma-separated',
-        'range_hint': 'Example: B3:M10',
         'bad_selection': 'choose a number from the list',
         'files': 'files',
         'folder': 'Folder',
         'run_result': 'Result',
         'time': 'Time',
-        'ids': 'IDs',
         'no_desktop': 'No desktop session; open the path manually',
     },
     'ru': {
@@ -277,14 +274,11 @@ TEXT = {
         'choose_sheets': 'Листы',
         'choose_range': 'Диапазон',
         'excel_hint': 'Путь к .xlsx или .xlsm',
-        'sheets_hint': 'Четыре имени через запятую',
-        'range_hint': 'Пример: B3:M10',
         'bad_selection': 'выберите номер из списка',
         'files': 'файлов',
         'folder': 'Папка',
         'run_result': 'Результат',
         'time': 'Время',
-        'ids': 'ID',
         'no_desktop': 'Нет графической сессии; откройте путь вручную',
     },
 }
@@ -634,7 +628,6 @@ class App:
         self.tool_output = []
         self.config = None
         self.config_error = None
-        self.config_source = 'auto'
         self.reload_config()
 
     @property
@@ -643,7 +636,7 @@ class App:
 
     def reload_config(self):
         """Load config.json when present, otherwise auto-detect the workbook."""
-        self.config, self.config_error, self.config_source = app_config.load_config(
+        self.config, self.config_error, _source = app_config.load_config(
             self.base_dir
         )
 

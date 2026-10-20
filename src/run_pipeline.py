@@ -63,19 +63,6 @@ def create_result_dir(base_dir):
         return result_dir
 
 
-def read_config(config_path='config.json'):
-    """Читает конфигурационный файл."""
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"Ошибка: файл конфигурации '{config_path}' не найден.", file=sys.stderr)
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Ошибка: неверный формат JSON в '{config_path}': {e}", file=sys.stderr)
-        sys.exit(1)
-
-
 def write_manifest(result_dir, config, base_dir):
     """Write the run configuration into the result folder."""
     excel_file = config.get('excel_file')
@@ -102,86 +89,75 @@ def write_manifest(result_dir, config, base_dir):
     return output
 
 
-def run(base_dir=None, log=print, config=None):
-    """Выполняет пайплайн и пишет все результаты в новую папку «Результат N».
+# ---------------------------------------------------------------------------
+# Pipeline
+# ---------------------------------------------------------------------------
 
-    ``config`` можно передать готовым словарём — тогда config.json не нужен.
-    Без него читается config.json, а если его нет, файл Excel и листы
-    определяются автоматически.
+
+class PipelineError(RuntimeError):
+    """Raised when a run cannot start or cannot finish."""
+
+
+def run(base_dir=None, log=print, config=None):
+    """Run the pipeline into a fresh «Результат N» folder.
+
+    Validation happens before the result folder is created, so a failed start
+    leaves no empty or misleading result behind.
     """
     base_dir = Path(base_dir) if base_dir else application_dir()
-    config_path = base_dir / 'config.json'
 
     log("=" * 60)
     log("Мастер-скрипт обработки планшетов")
     log("=" * 60)
 
     if config is None:
-        if config_path.exists():
-            config = read_config(config_path)
-        else:
-            config, config_error, _source = app_config.load_config(base_dir)
-            if config_error:
-                print(f"Ошибка: {config_error}", file=sys.stderr)
-                sys.exit(1)
+        config, config_error, _source = app_config.load_config(base_dir)
+        if config_error:
+            raise PipelineError(config_error)
+    else:
+        try:
+            config = app_config.validate_config(config, base_dir)
+        except app_config.ConfigError as exc:
+            raise PipelineError(str(exc)) from exc
 
-    excel_file = config.get('excel_file')
-    excel_path = None
-    if excel_file:
-        excel_path = Path(excel_file)
-        if not excel_path.is_absolute():
-            excel_path = base_dir / excel_path
+    excel_file = config['excel_file']
+    excel_path = Path(excel_file)
+    if not excel_path.is_absolute():
+        excel_path = base_dir / excel_path
 
-    # Создаём папку результатов при каждом запуске
     result_dir = create_result_dir(base_dir)
     log(f"\nПапка результатов: {result_dir.name}")
     write_manifest(result_dir, config, base_dir)
 
-    extracted = False
+    log(f"\nНайден Excel файл: {excel_path.name}")
+    log("Запускаем извлечение данных из Excel...")
+    log(f"{'=' * 60}\n")
 
-    # Проверяем наличие Excel файла
-    if excel_path and excel_path.exists():
-        log(f"\nНайден Excel файл: {excel_path.name}")
-        log("Запускаем извлечение данных из Excel...")
-        log(f"{'=' * 60}\n")
+    try:
+        extract_plates_from_excel.main(
+            config_path=base_dir / 'config.json',
+            output_dir=result_dir,
+            base_dir=base_dir,
+            config=config,
+            log=log,
+        )
+    except Exception as exc:
+        raise PipelineError(f'извлечение из Excel: {exc}') from exc
 
-        try:
-            # Запускаем извлечение данных из Excel напрямую
-            extract_plates_from_excel.main(
-                config_path=config_path,
-                output_dir=result_dir,
-                base_dir=base_dir,
-                config=config,
-                log=log,
-            )
-            extracted = True
-            log("\n✓ Извлечение данных из Excel выполнено успешно")
-        except Exception as e:
-            print(f"\n✗ Ошибка при извлечении данных из Excel: {e}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        if excel_file:
-            log(f"\nExcel файл '{excel_file}' не найден в папке программы.")
-        else:
-            log("\nExcel файл не указан в конфигурации.")
-        log("Пропускаем этап извлечения из Excel.")
-        log("Предполагается, что CSV файлы планшетов уже существуют.")
-
-    # Всегда запускаем объединение планшетов
+    log("\n✓ Извлечение данных из Excel выполнено успешно")
     log("\nЗапускаем объединение планшетов...")
     log(f"{'=' * 60}\n")
 
     try:
         combine_plates.main(
             output_dir=result_dir,
-            input_dir=result_dir if extracted else base_dir,
+            input_dir=result_dir,
             log=log,
         )
-        log("\n✓ Объединение планшетов выполнено успешно")
-    except Exception as e:
-        print(f"\n✗ Ошибка при объединении планшетов: {e}", file=sys.stderr)
-        sys.exit(1)
+    except Exception as exc:
+        raise PipelineError(f'объединение планшетов: {exc}') from exc
 
+    log("\n✓ Объединение планшетов выполнено успешно")
     log("\n" + "=" * 60)
     log("Пайплайн выполнен успешно!")
     log(f"Результаты: {result_dir}")
@@ -241,7 +217,11 @@ def main(argv=None):
         App(lang=args.lang).run()
         return 0
 
-    run()
+    try:
+        run()
+    except PipelineError as exc:
+        print(f'Ошибка: {exc}', file=sys.stderr)
+        return 1
     return 0
 
 

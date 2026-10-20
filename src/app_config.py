@@ -11,8 +11,6 @@ import json
 import re
 from pathlib import Path
 
-from xlsx_reader import load_workbook
-
 EXCEL_SUFFIXES = ('.xlsx', '.xlsm')
 PLATE_KEYS = ('plate1', 'plate2', 'plate3', 'plate4')
 
@@ -46,8 +44,13 @@ def discover_excel(base_dir):
 
 def sheet_names(path):
     """Return sheet names from an Excel workbook."""
-    with load_workbook(path) as workbook:
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(path)
+    try:
         return workbook.sheetnames
+    finally:
+        workbook.close()
 
 
 def build_config(base_dir, excel_file=None, sheets=None, data_range=None):
@@ -105,20 +108,97 @@ def load_config(base_dir):
     """Return ``(config, error, source)``.
 
     An existing ``config.json`` wins for backwards compatibility. Without one,
-    the workbook is auto-discovered; that is not an error.
+    the workbook is auto-discovered; that is not an error. Every returned
+    config is validated before it reaches the pipeline.
     """
     path = Path(base_dir) / 'config.json'
     if path.exists():
         try:
             with open(path, encoding='utf-8') as config_file:
-                return json.load(config_file), None, 'config.json'
-        except (OSError, json.JSONDecodeError) as exc:
+                config = validate_config(json.load(config_file), base_dir)
+            return config, None, 'config.json'
+        except (OSError, json.JSONDecodeError, ConfigError) as exc:
             return None, str(exc), 'config.json'
 
     try:
         return build_config(base_dir), None, 'auto'
     except ConfigError as exc:
         return None, str(exc), 'auto'
+
+
+def validate_config(config, base_dir=None, check_sheets=True):
+    """Validate and normalize a config dictionary.
+
+    Raises ConfigError when the workbook, sheets or ranges cannot be used.
+    """
+    if not isinstance(config, dict):
+        raise ConfigError('config must be an object')
+
+    excel_file = config.get('excel_file')
+    if not isinstance(excel_file, str) or not excel_file.strip():
+        raise ConfigError('excel_file is missing')
+
+    path = Path(excel_file)
+    if base_dir is not None and not path.is_absolute():
+        path = Path(base_dir) / path
+    if not path.is_file():
+        raise ConfigError(f'Excel file not found: {path}')
+
+    sheets = config.get('sheets')
+    if not isinstance(sheets, dict):
+        raise ConfigError('sheets must be an object')
+
+    names = []
+    for key in PLATE_KEYS:
+        item = sheets.get(key)
+        if not isinstance(item, dict) or not item.get('sheet_name'):
+            raise ConfigError(f'sheet is missing for {key}')
+        names.append(str(item['sheet_name']).strip())
+    if len(set(names)) != 4:
+        raise ConfigError('sheet names must be unique')
+
+    if check_sheets:
+        try:
+            available = sheet_names(path)
+        except Exception as exc:
+            raise ConfigError(f'cannot read {path.name}: {exc}') from exc
+        missing = [name for name in names if name not in available]
+        if missing:
+            raise ConfigError(f"sheet not found: {', '.join(missing)}")
+
+    data_range = config.get('data_range')
+    if not isinstance(data_range, dict):
+        raise ConfigError('data_range is missing')
+
+    normalized_range = {}
+    for key in ('start_row', 'end_row', 'start_col', 'end_col'):
+        try:
+            value = int(data_range[key])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ConfigError(f'data_range.{key} must be an integer') from exc
+        if value < 1:
+            raise ConfigError(f'data_range.{key} must be positive')
+        normalized_range[key] = value
+    if normalized_range['end_row'] < normalized_range['start_row']:
+        raise ConfigError('data_range end_row is before start_row')
+    if normalized_range['end_col'] < normalized_range['start_col']:
+        raise ConfigError('data_range end_col is before start_col')
+
+    normalized = dict(config)
+    normalized['sheets'] = {
+        key: dict(sheets[key]) for key in PLATE_KEYS
+    }
+    normalized['data_range'] = normalized_range
+    for key in ('row_labels_col', 'column_labels_row', 'metadata_row'):
+        try:
+            value = int(config.get(key, 1))
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f'{key} must be an integer') from exc
+        if value < 1:
+            raise ConfigError(f'{key} must be positive')
+        normalized[key] = value
+
+    return normalized
 
 
 def parse_range(text):
@@ -141,16 +221,6 @@ def parse_range(text):
         'start_col': start_col,
         'end_col': end_col,
     }
-
-
-def update_sheets(config, names):
-    """Return a config with four new sheet names, preserving the range."""
-    config = dict(config)
-    config['sheets'] = {
-        key: {'sheet_name': name}
-        for key, name in zip(PLATE_KEYS, names)
-    }
-    return config
 
 
 def _relative_name(path, base):

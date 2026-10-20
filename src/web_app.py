@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 import tempfile
+import time
 from pathlib import Path
 
-from nicegui import context, ui
+from nicegui import app, context, ui
 
 import app_config
 import pcr_tools
@@ -33,8 +35,6 @@ TOOLS = (
     ('layout', 'plate_layout'),
     ('xlsx', 'xlsx_export'),
 )
-
-LANG = {'code': 'en'}
 
 TEXTS = {
     'en': {
@@ -176,10 +176,6 @@ TEXTS = {
 }
 
 
-def tr(key):
-    return TEXTS[LANG['code']].get(key, key)
-
-
 THEME_CSS = """
 :root {
   --paper: #f6efe3;
@@ -297,22 +293,66 @@ body::before {
   * { transition: none !important; animation: none !important; }
 }
 """
+def current_lang():
+    try:
+        return app.storage.user.get('lang', 'en')
+    except Exception:
+        return 'en'
+
+
+def tr(key):
+    return TEXTS[current_lang()].get(key, key)
 
 
 def change_language(code):
-    LANG['code'] = code if code in TEXTS else 'en'
+    app.storage.user['lang'] = code if code in TEXTS else 'en'
     ui.navigate.reload()
 
 
 class State:
     def __init__(self, base_dir):
         self.base_dir = Path(base_dir)
-        self.config, self.error, _source = app_config.load_config(self.base_dir)
-        self.logs = []
+        self._default_config, self._default_error, _source = app_config.load_config(
+            self.base_dir
+        )
         self.running = False
-        self.last_result = None
         self.uploads = self.base_dir / '.uploads'
         self.uploads.mkdir(exist_ok=True)
+        self._prune_uploads()
+
+    @property
+    def config(self):
+        try:
+            stored = app.storage.user.get('config')
+        except Exception:
+            stored = None
+        return stored if stored is not None else self._default_config
+
+    @config.setter
+    def config(self, value):
+        app.storage.user['config'] = value
+
+    @property
+    def error(self):
+        try:
+            if 'config_error' in app.storage.user:
+                return app.storage.user['config_error']
+        except Exception:
+            pass
+        return self._default_error
+
+    @error.setter
+    def error(self, value):
+        app.storage.user['config_error'] = value
+
+    def _prune_uploads(self):
+        cutoff = time.time() - 7 * 24 * 3600
+        for path in self.uploads.glob('*'):
+            try:
+                if path.is_file() and path.stat().st_mtime < cutoff:
+                    path.unlink()
+            except OSError:
+                pass
 
     def workbooks(self):
         found = app_config.discover_excel(self.base_dir)
@@ -393,9 +433,9 @@ def build_app(base_dir):
             ui.space()
             ui.label('autumn 2026 · local').classes('badge')
 
-    def drain_logs(element):
-        while state.logs:
-            element.push(state.logs.pop(0))
+    def drain_logs(element, lines):
+        while lines:
+            element.push(lines.pop(0))
 
     def download_file(path):
         path = Path(path)
@@ -460,8 +500,9 @@ def build_app(base_dir):
         ).classes('w-60')
 
         log = ui.log(max_lines=1000).classes('w-full h-64 font-mono text-xs log-panel')
+        log_lines = []
         result_box = ui.column().classes('w-full')
-        ui.timer(0.3, lambda: drain_logs(log))
+        ui.timer(0.3, lambda: drain_logs(log, log_lines))
 
         def current_sheets():
             values = []
@@ -506,6 +547,9 @@ def build_app(base_dir):
 
         async def on_upload(event):
             name = Path(event.file.name).name
+            if Path(name).suffix.lower() not in ('.xlsx', '.xlsm'):
+                ui.notify('select an .xlsx or .xlsm file', type='negative')
+                return
             target = state.uploads / name
             target.write_bytes(await event.file.read())
             try:
@@ -528,6 +572,7 @@ def build_app(base_dir):
 
         async def run_now():
             if state.running:
+                ui.notify('a run is already in progress', type='warning')
                 return
             try:
                 excel = workbook_select.value
@@ -545,7 +590,7 @@ def build_app(base_dir):
                 result = await asyncio.to_thread(
                     run_pipeline.run,
                     base_dir=state.base_dir,
-                    log=lambda message: state.logs.append(str(message)),
+                    log=lambda message: log_lines.append(str(message)),
                     config=config,
                 )
             except SystemExit as exc:
@@ -553,7 +598,6 @@ def build_app(base_dir):
             except Exception as exc:
                 ui.notify(str(exc), type='negative')
             else:
-                state.last_result = result
                 render_result(result, result_box)
                 ui.notify(f"{tr('done')}: {result.name}", type='positive')
             finally:
@@ -878,4 +922,5 @@ def main(base_dir=None, port=8080, show=True):
         reload=False,
         show=show,
         dark=False,
+        storage_secret=secrets.token_hex(16),
     )

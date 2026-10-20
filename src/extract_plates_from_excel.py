@@ -5,24 +5,9 @@
 """
 
 import csv
-import json
-import sys
 from pathlib import Path
 
-from xlsx_reader import load_workbook
-
-
-def read_config(config_path='config.json'):
-    """Читает конфигурационный файл."""
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"Ошибка: файл конфигурации '{config_path}' не найден.", file=sys.stderr)
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Ошибка: неверный формат JSON в '{config_path}': {e}", file=sys.stderr)
-        sys.exit(1)
+import app_config
 
 
 def extract_plate_data(workbook, sheet_name, config):
@@ -39,9 +24,8 @@ def extract_plate_data(workbook, sheet_name, config):
     """
     try:
         sheet = workbook[sheet_name]
-    except KeyError:
-        print(f"Ошибка: лист '{sheet_name}' не найден в файле.", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as exc:
+        raise ValueError(f"лист '{sheet_name}' не найден в файле") from exc
     
     data_range = config['data_range']
     start_row = data_range['start_row']  # 3
@@ -138,23 +122,26 @@ def main(config_path='config.json', output_dir=None, base_dir=None, log=print, c
     output_dir = Path(output_dir) if output_dir else base_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Готовый config передаёт UI; CLI читает config.json.
+    # Готовый config передаёт UI; CLI берёт его из app_config.
     if config is None:
-        config = read_config(config_path)
-    
+        config, config_error, _source = app_config.load_config(base_dir)
+        if config_error:
+            raise app_config.ConfigError(config_error)
+
     excel_file = Path(config['excel_file'])
     if not excel_file.is_absolute():
         excel_file = base_dir / excel_file
-    if not excel_file.exists():
-        print(f"Ошибка: файл '{excel_file}' не найден.", file=sys.stderr)
-        sys.exit(1)
-    
-    # Открываем Excel файл
+    if not excel_file.is_file():
+        raise FileNotFoundError(f"файл '{excel_file}' не найден")
+
     try:
+        from openpyxl import load_workbook
+
         workbook = load_workbook(excel_file, data_only=True)
-    except Exception as e:
-        print(f"Ошибка при открытии файла '{excel_file}': {e}", file=sys.stderr)
-        sys.exit(1)
+    except Exception as exc:
+        raise ValueError(
+            f"не удалось открыть '{excel_file}': {exc}"
+        ) from exc
     
     # Обрабатываем каждый планшет
     metadata_dict = {}
