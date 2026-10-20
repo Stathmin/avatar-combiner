@@ -22,158 +22,22 @@ import report_xlsx
 import run_pipeline
 import seq_import
 import seq_structure
+import tool_reports
 import tools as genetics
+from i18n import TEXT
 
 TOOLS = (
-    ('tm', 'primer_tm'),
-    ('pair', 'primer_pair'),
-    ('dna', 'dna'),
-    ('units', 'units'),
-    ('structure', 'structure'),
-    ('pcr', 'pcr'),
-    ('import', 'import_seq'),
-    ('layout', 'plate_layout'),
-    ('xlsx', 'xlsx_export'),
+    ('tm', 'tool_tm'),
+    ('pair', 'tool_pair'),
+    ('dna', 'tool_dna'),
+    ('units', 'tool_units'),
+    ('structure', 'tool_structure'),
+    ('pcr', 'tool_pcr'),
+    ('import', 'tool_import'),
+    ('layout', 'tool_layout'),
+    ('xlsx', 'tool_xlsx'),
 )
 
-TEXTS = {
-    'en': {
-        'pipeline': 'Pipeline',
-        'results': 'Results',
-        'genetics_tools': 'GENETICS TOOLS',
-        'language': 'Language',
-        'workbook': 'Workbook',
-        'excel_file': 'Excel file',
-        'upload_xlsx': 'Upload .xlsx',
-        'sheets': 'Sheets',
-        'plate': 'Plate',
-        'data_range': 'Data range',
-        'run': 'Run',
-        'all_tools': 'All tools',
-        'result': 'Result',
-        'primer_tm': 'Primer Tm',
-        'primer_pair': 'Primer pair',
-        'dna': 'DNA',
-        'units': 'Units',
-        'structure': 'Structure',
-        'pcr': 'PCR',
-        'files': 'Files',
-        'import_seq': 'Import sequence',
-        'plate_layout': 'Plate layout',
-        'xlsx_export': 'XLSX export',
-        'sequence': 'Sequence',
-        'forward': 'Forward',
-        'reverse': 'Reverse',
-        'template': 'Template',
-        'value': 'Value',
-        'target_unit': 'Target unit',
-        'result_folder': 'Result folder',
-        'upload_sequence': 'Sequence file (.gb, .dna, .fa)',
-        'upload_layout': 'Wellmap layout (.toml)',
-        'analyse': 'Analyse',
-        'analyse_pair': 'Analyse pair',
-        'transform': 'Transform',
-        'convert': 'Convert',
-        'fold': 'Fold',
-        'simulate': 'Simulate',
-        'export_xlsx': 'Export XLSX',
-        'no_results': 'No results yet.',
-        'uploaded': 'Uploaded',
-        'failed': 'Run failed',
-        'done': 'Done',
-        'length': 'length',
-        'gc': 'GC',
-        'tm': 'Tm',
-        'hairpin': 'hairpin',
-        'dimer': 'dimer',
-        'hetero': 'hetero',
-        'end3': "3' end",
-        'complement': 'complement',
-        'reverse_seq': 'reverse',
-        'revcomp': 'revcomp',
-        'product': 'product',
-        'wells': 'wells',
-        'conditions': 'conditions',
-        'name': 'name',
-        'format': 'format',
-        'topology': 'topology',
-        'records': 'records',
-        'features': 'features',
-        'dg': 'dG',
-        'fold_label': 'fold',
-        'error': 'Error',
-        'hero_kicker': 'LOCAL GENETICS WORKBENCH',
-        'hero_sub': 'Pick the workbook, confirm four sheets, run. Every result keeps a manifest.',
-    },
-    'ru': {
-        'pipeline': 'Пайплайн',
-        'results': 'Результаты',
-        'genetics_tools': 'ГЕНЕТИЧЕСКИЕ ИНСТРУМЕНТЫ',
-        'language': 'Язык',
-        'workbook': 'Файл Excel',
-        'excel_file': 'Файл Excel',
-        'upload_xlsx': 'Загрузить .xlsx',
-        'sheets': 'Листы',
-        'plate': 'Планшет',
-        'data_range': 'Диапазон',
-        'run': 'Запустить',
-        'all_tools': 'Все инструменты',
-        'result': 'Результат',
-        'primer_tm': 'Tm праймера',
-        'primer_pair': 'Пара праймеров',
-        'dna': 'ДНК',
-        'units': 'Единицы',
-        'structure': 'Структура',
-        'pcr': 'ПЦР',
-        'files': 'Файлы',
-        'import_seq': 'Импорт последовательности',
-        'plate_layout': 'Раскладка планшета',
-        'xlsx_export': 'Экспорт XLSX',
-        'sequence': 'Последовательность',
-        'forward': 'Прямой',
-        'reverse': 'Обратный',
-        'template': 'Матрица',
-        'value': 'Значение',
-        'target_unit': 'Целевая единица',
-        'result_folder': 'Папка результата',
-        'upload_sequence': 'Файл последовательности (.gb, .dna, .fa)',
-        'upload_layout': 'Раскладка wellmap (.toml)',
-        'analyse': 'Анализ',
-        'analyse_pair': 'Анализ пары',
-        'transform': 'Преобразовать',
-        'convert': 'Перевести',
-        'fold': 'Сложить',
-        'simulate': 'Симулировать',
-        'export_xlsx': 'Экспорт XLSX',
-        'no_results': 'Результатов пока нет.',
-        'uploaded': 'Загружено',
-        'failed': 'Ошибка запуска',
-        'done': 'Готово',
-        'length': 'длина',
-        'gc': 'GC',
-        'tm': 'Tm',
-        'hairpin': 'шпилька',
-        'dimer': 'димер',
-        'hetero': 'гетеродимер',
-        'end3': "3' конец",
-        'complement': 'комплемент',
-        'reverse_seq': 'реверс',
-        'revcomp': 'обратный комплемент',
-        'product': 'продукт',
-        'wells': 'лунок',
-        'conditions': 'условия',
-        'name': 'название',
-        'format': 'формат',
-        'topology': 'топология',
-        'records': 'записей',
-        'features': 'признаков',
-        'dg': 'dG',
-        'fold_label': 'складка',
-        'error': 'Ошибка',
-        'hero_kicker': 'ЛОКАЛЬНАЯ ГЕНЕТИЧЕСКАЯ ЛАБОРАТОРИЯ',
-        'hero_sub': 'Выберите файл, проверьте четыре листа, запустите. Каждый результат хранит manifest.',
-    },
-}
 
 
 THEME_CSS = """
@@ -301,11 +165,11 @@ def current_lang():
 
 
 def tr(key):
-    return TEXTS[current_lang()].get(key, key)
+    return TEXT[current_lang()].get(key, key)
 
 
 def change_language(code):
-    app.storage.user['lang'] = code if code in TEXTS else 'en'
+    app.storage.user['lang'] = code if code in TEXT else 'en'
     ui.navigate.reload()
 
 
@@ -645,13 +509,13 @@ def build_app(base_dir):
                 show(container, f"{tr('error')}: {exc}")
 
         with ui.tabs().classes('w-full') as tabs:
-            tm_tab = ui.tab(tr('primer_tm'))
-            pair_tab = ui.tab(tr('primer_pair'))
-            dna_tab = ui.tab(tr('dna'))
-            units_tab = ui.tab(tr('units'))
-            structure_tab = ui.tab(tr('structure'))
-            pcr_tab = ui.tab(tr('pcr'))
-            files_tab = ui.tab(tr('files'))
+            tm_tab = ui.tab(tr('tool_tm'))
+            pair_tab = ui.tab(tr('tool_pair'))
+            dna_tab = ui.tab(tr('tool_dna'))
+            units_tab = ui.tab(tr('tool_units'))
+            structure_tab = ui.tab(tr('tool_structure'))
+            pcr_tab = ui.tab(tr('tool_pcr'))
+            files_tab = ui.tab(tr('files_tab'))
 
         tab_map = {
             'tm': tm_tab,
@@ -668,15 +532,15 @@ def build_app(base_dir):
         ui.label(tr('all_tools')).classes('text-lg font-bold mt-2')
         with ui.row().classes('flex-wrap tool-index'):
             index = (
-                ('primer_tm', tm_tab),
-                ('primer_pair', pair_tab),
-                ('dna', dna_tab),
-                ('units', units_tab),
-                ('structure', structure_tab),
-                ('pcr', pcr_tab),
-                ('import_seq', files_tab),
-                ('plate_layout', files_tab),
-                ('xlsx_export', files_tab),
+                ('tool_tm', tm_tab),
+                ('tool_pair', pair_tab),
+                ('tool_dna', dna_tab),
+                ('tool_units', units_tab),
+                ('tool_structure', structure_tab),
+                ('tool_pcr', pcr_tab),
+                ('tool_import', files_tab),
+                ('tool_layout', files_tab),
+                ('tool_xlsx', files_tab),
             )
             for label_key, tab in index:
                 ui.button(
@@ -700,7 +564,7 @@ def build_app(base_dir):
 
             with ui.tab_panel(pair_tab):
                 pair_forward = ui.input(tr('forward'))
-                pair_reverse = ui.input(tr('reverse'))
+                pair_reverse = ui.input(tr('reverse_primer'))
                 pair_out = ui.column()
                 ui.button(
                     tr('analyse_pair'),
@@ -733,8 +597,8 @@ def build_app(base_dir):
                     on_click=lambda: safe_show(
                         unit_out,
                         lambda: '\n'.join(
-                            f'{genetics.format_number(amount)} {unit}'
-                            for unit, amount in genetics.convert_text(
+                            f'{amount} {unit}'
+                            for unit, amount in tool_reports.unit_rows(
                                 unit_quantity.value, unit_target.value
                             )
                         ),
@@ -759,7 +623,7 @@ def build_app(base_dir):
             with ui.tab_panel(pcr_tab):
                 pcr_template = ui.textarea(tr('template'))
                 pcr_forward = ui.input(tr('forward'))
-                pcr_reverse = ui.input(tr('reverse'))
+                pcr_reverse = ui.input(tr('reverse_primer'))
                 pcr_out = ui.column()
                 ui.button(
                     tr('simulate'),
@@ -822,92 +686,39 @@ def build_app(base_dir):
     return state
 
 
-def _primer_report(report):
+def render_rows(rows):
     return '\n'.join(
-        [
-            f"{tr('sequence')} {report.sequence}",
-            f"{tr('length')}   {report.length} nt",
-            f"{tr('gc')}       {report.gc:.1f}%",
-            f"{tr('tm')}       {report.tm:.1f} C",
-            f"{tr('hairpin')}  {_thermo(report.hairpin)}",
-            f"{tr('dimer')}    {_thermo(report.homodimer)}",
-        ]
+        f"{tr(key)}  {tr('none') if value is None else value}"
+        for key, value in rows
     )
+
+
+def _primer_report(report):
+    return render_rows(tool_reports.primer_rows(report))
 
 
 def _pair_report(report):
-    return '\n'.join(
-        [
-            f"{tr('forward')}  {report.forward.sequence}  Tm {report.forward.tm:.1f} C",
-            f"{tr('reverse')}  {report.reverse.sequence}  Tm {report.reverse.tm:.1f} C",
-            f"dT       {abs(report.forward.tm - report.reverse.tm):.1f} C",
-            f"{tr('hetero')}   {_thermo(report.heterodimer)}",
-            f"{tr('end3')}   {_thermo(report.end_stability)}",
-        ]
-    )
+    return render_rows(tool_reports.pair_rows(report))
 
 
 def _dna_report(sequence):
-    sequence = genetics.normalize_dna(sequence)
-    return '\n'.join(
-        [
-            f"{tr('length')}     {len(sequence)} nt",
-            f"{tr('gc')}         {genetics.gc_content(sequence):.1f}%",
-            f"{tr('complement')} {genetics.complement(sequence)}",
-            f"{tr('reverse_seq')}    {genetics.reverse(sequence)}",
-            f"{tr('revcomp')}    {genetics.reverse_complement(sequence)}",
-        ]
-    )
+    return render_rows(tool_reports.dna_rows(sequence))
 
 
 def _structure_report(report):
-    dg = 'n/a' if report.dg is None else f'{report.dg:.2f} kcal/mol'
-    tm = 'n/a' if report.tm is None else f'{report.tm:.1f} C'
-    return '\n'.join(
-        [
-            f"{tr('sequence')} {report.sequence}",
-            f"{tr('dg')}       {dg}",
-            f"{tr('tm')}       {tm}",
-            f"{tr('fold_label')}     {report.dot_bracket}",
-        ]
-    )
+    return render_rows(tool_reports.structure_rows(report))
 
 
 def _pcr_report(report):
-    return '\n'.join(
-        [
-            f"{tr('product')}  {report.length} nt",
-            f"{tr('sequence')} {report.sequence}",
-        ]
-    )
+    return render_rows(tool_reports.pcr_rows(report))
 
 
 def _sequence_report(record):
-    return '\n'.join(
-        [
-            f"{tr('name')}      {record.name}",
-            f"{tr('format')}    {record.source_format}",
-            f"{tr('length')}    {len(record.sequence)} nt",
-            f"{tr('topology')}  {record.topology}",
-            f"{tr('records')}   {record.record_count}",
-            f"{tr('features')}  {len(record.features)}",
-        ]
-    )
+    return render_rows(tool_reports.sequence_rows(record))
 
 
 def _layout_report(report):
-    return '\n'.join(
-        [
-            f"{tr('wells')}       {report.wells}",
-            f"{tr('conditions')}  {', '.join(report.conditions) or 'none'}",
-        ]
-    )
-
-
-def _thermo(result):
-    if not getattr(result, 'structure_found', False):
-        return 'none'
-    return f'Tm {result.tm:.1f} C, dG {result.dg / 1000.0:.2f} kcal/mol'
+    return render_rows(tool_reports.layout_rows(report))
 
 
 def main(base_dir=None, port=8080, show=True):

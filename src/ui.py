@@ -24,7 +24,9 @@ import report_xlsx
 import run_pipeline
 import seq_import
 import seq_structure
+import tool_reports
 import tools as genetics
+from i18n import TEXT
 from run_pipeline import __version__, application_dir, next_result_number
 
 RESULT_PATTERN = run_pipeline.RESULT_DIR_PATTERN
@@ -82,206 +84,6 @@ RESET_FG = '\x1b[39m\x1b[22m'
 ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
 
 
-TEXT = {
-    'en': {
-        'subtitle': '4 × 96-well plates  →  1 × 384-well plate',
-        'status': 'STATUS',
-        'ready': 'READY',
-        'excel': 'Excel',
-        'sheets': 'Sheets',
-        'next': 'Next',
-        'last': 'Last',
-        'none': 'none',
-        'actions': 'ACTIONS',
-        'run': 'Run pipeline',
-        'results': 'Results',
-        'open_last': 'Open last result',
-        'config': 'Config',
-        'help': 'Help',
-        'tools': 'Genetics',
-        'group_inspect': 'INSPECT',
-        'group_structure': 'STRUCTURE',
-        'group_files': 'FILES',
-        'tool_tm': 'Primer Tm',
-        'tool_pair': 'Primer pair',
-        'tool_dna': 'Complement / reverse complement',
-        'tool_units': 'Unit converter',
-        'tool_structure': 'Oligo structure',
-        'tool_import': 'Import sequence file',
-        'tool_layout': 'Validate plate layout',
-        'tool_pcr': 'In-silico PCR',
-        'tool_xlsx': 'Export result to XLSX',
-        'structure_hint': 'ACGT only. Hairpins and self-dimers.',
-        'structure_dg': 'ΔG',
-        'structure_fold': 'Fold',
-        'structure_none': 'no stable structure',
-        'import_name': 'Name',
-        'import_path': 'File path',
-        'import_format': 'Format',
-        'import_topology': 'Topology',
-        'import_records': 'Records',
-        'import_features': 'Features',
-        'import_hint': '.gb .gbk .dna .fa .fasta',
-        'layout_hint': 'Path to a wellmap .toml',
-        'layout_wells': 'Wells',
-        'layout_conditions': 'Conditions',
-        'pcr_template': 'Template',
-        'pcr_forward': 'Forward',
-        'pcr_reverse': 'Reverse',
-        'pcr_product': 'Product',
-        'xlsx_hint': 'Path to a «Результат N» folder',
-        'xlsx_done': 'Saved',
-        'tool_result': 'RESULT',
-        'tool_footer': '1–4 inspect  ·  5/8 structure  ·  6/7/9 files  ·  B back',
-        'prompt_footer': 'Enter confirm  ·  Esc cancel  ·  Ctrl+U clear',
-        'sequence': 'Sequence',
-        'length': 'Length',
-        'gc': 'GC',
-        'tm': 'Tm',
-        'hairpin': 'Hairpin',
-        'homodimer': 'Homodimer',
-        'heterodimer': 'Heterodimer',
-        'end_stability': "3' end",
-        'forward': 'Forward',
-        'reverse_primer': 'Reverse',
-        'complement': 'Complement',
-        'reverse_seq': 'Reverse',
-        'reverse_complement': 'Reverse complement',
-        'quantity': 'Value',
-        'target_unit': 'Target unit',
-        'unit_hint': 'Example: 25 uM → nM. Empty target lists all units.',
-        'primer_hint': 'ACGT only. 18–25 nt recommended.',
-        'pcr_hint': 'ACGT only, up to 10 kb.',
-        'dna_hint': 'ACGTN / IUPAC accepted.',
-        'language': 'Language',
-        'quit': 'Quit',
-        'back': 'Back',
-        'footer': 'R run  ·  D results  ·  O open  ·  C config  ·  T tools  ·  H help  ·  L language  ·  Q quit',
-        'help_footer': 'L switch language  ·  B back  ·  Q quit',
-        'config_footer': 'F file · S sheets · R range · O folder · B back',
-        'results_footer': '↑↓ select  ·  Enter/O open  ·  R run  ·  B back',
-        'no_results': 'No result folders yet. Press R to run.',
-        'run_hint': 'Each run creates a new «Результат N» folder.',
-        'working': 'RUNNING',
-        'done': 'DONE',
-        'error': 'ERROR',
-        'press_any': 'Press any key to return',
-        'open_folder': 'Open program folder',
-        'range': 'Range',
-        'opened': 'Opened',
-        'open_failed': 'Could not open',
-        'config_missing': 'Excel file not found',
-        'choose_excel': 'Excel file',
-        'choose_sheets': 'Sheets',
-        'choose_range': 'Data range',
-        'excel_hint': 'Path to .xlsx or .xlsm',
-        'bad_selection': 'choose a number from the list',
-        'files': 'files',
-        'folder': 'Folder',
-        'run_result': 'Result',
-        'time': 'Time',
-        'no_desktop': 'No desktop session; open the path manually',
-    },
-    'ru': {
-        'subtitle': '4 планшета × 96 лунок  →  1 планшет × 384 лунки',
-        'status': 'СТАТУС',
-        'ready': 'ГОТОВО',
-        'excel': 'Excel',
-        'sheets': 'Листы',
-        'next': 'Далее',
-        'last': 'Последний',
-        'none': 'нет',
-        'actions': 'ДЕЙСТВИЯ',
-        'run': 'Запустить',
-        'results': 'Результаты',
-        'open_last': 'Открыть последний',
-        'config': 'Настройки',
-        'help': 'Помощь',
-        'tools': 'Генетика',
-        'group_inspect': 'ПРОВЕРКА',
-        'group_structure': 'СТРУКТУРА',
-        'group_files': 'ФАЙЛЫ',
-        'tool_tm': 'Tm праймера',
-        'tool_pair': 'Пара праймеров',
-        'tool_dna': 'Комплемент / обратный комплемент',
-        'tool_units': 'Конвертер единиц',
-        'tool_structure': 'Структура олиго',
-        'tool_import': 'Импорт файла',
-        'tool_layout': 'Проверить раскладку',
-        'tool_pcr': 'ПЦР in silico',
-        'tool_xlsx': 'Экспорт в XLSX',
-        'structure_hint': 'Только ACGT. Шпильки и самодимеры.',
-        'structure_dg': 'ΔG',
-        'structure_fold': 'Складка',
-        'structure_none': 'нет устойчивой структуры',
-        'import_name': 'Название',
-        'import_path': 'Путь к файлу',
-        'import_format': 'Формат',
-        'import_topology': 'Топология',
-        'import_records': 'Записей',
-        'import_features': 'Признаки',
-        'import_hint': '.gb .gbk .dna .fa .fasta',
-        'layout_hint': 'Путь к .toml wellmap',
-        'layout_wells': 'Лунок',
-        'layout_conditions': 'Условия',
-        'pcr_template': 'Матрица',
-        'pcr_forward': 'Прямой',
-        'pcr_reverse': 'Обратный',
-        'pcr_product': 'Продукт',
-        'xlsx_hint': 'Путь к папке «Результат N»',
-        'xlsx_done': 'Сохранено',
-        'tool_result': 'РЕЗУЛЬТАТ',
-        'tool_footer': '1–4 проверка  ·  5/8 структура  ·  6/7/9 файлы  ·  B назад',
-        'prompt_footer': 'Enter подтвердить  ·  Esc отмена  ·  Ctrl+U очистить',
-        'sequence': 'Последовательность',
-        'length': 'Длина',
-        'gc': 'GC',
-        'tm': 'Tm',
-        'hairpin': 'Шпилька',
-        'homodimer': 'Гомодимер',
-        'heterodimer': 'Гетеродимер',
-        'end_stability': "3' конец",
-        'forward': 'Прямой',
-        'reverse_primer': 'Обратный',
-        'complement': 'Комплемент',
-        'reverse_seq': 'Реверс',
-        'reverse_complement': 'Обратный комплемент',
-        'quantity': 'Значение',
-        'target_unit': 'Целевая единица',
-        'unit_hint': 'Пример: 25 uM → nM. Пустая цель — все единицы.',
-        'primer_hint': 'Только ACGT. Рекомендуется 18–25 нт.',
-        'pcr_hint': 'Только ACGT, до 10 кб.',
-        'dna_hint': 'Допускаются ACGTN / IUPAC.',
-        'language': 'Язык',
-        'quit': 'Выход',
-        'back': 'Назад',
-        'footer': 'R запуск  ·  D результаты  ·  O открыть  ·  C настройки  ·  T инструменты  ·  H помощь  ·  Q выход',
-        'help_footer': 'L сменить язык  ·  B назад  ·  Q выход',
-        'config_footer': 'F файл · S листы · R диапазон · O папка · B назад',
-        'results_footer': '↑↓ выбор  ·  Enter/O открыть  ·  R запуск  ·  B назад',
-        'no_results': 'Папок результатов пока нет. Нажмите R.',
-        'run_hint': 'Каждый запуск создаёт новую папку «Результат N».',
-        'working': 'РАБОТА',
-        'done': 'ГОТОВО',
-        'error': 'ОШИБКА',
-        'press_any': 'Нажмите любую клавишу',
-        'open_folder': 'Открыть папку программы',
-        'range': 'Диапазон',
-        'opened': 'Открыто',
-        'open_failed': 'Не удалось открыть',
-        'config_missing': 'Excel-файл не найден',
-        'choose_excel': 'Excel-файл',
-        'choose_sheets': 'Листы',
-        'choose_range': 'Диапазон',
-        'excel_hint': 'Путь к .xlsx или .xlsm',
-        'bad_selection': 'выберите номер из списка',
-        'files': 'файлов',
-        'folder': 'Папка',
-        'run_result': 'Результат',
-        'time': 'Время',
-        'no_desktop': 'Нет графической сессии; откройте путь вручную',
-    },
-}
 
 
 HELP = {
@@ -1002,20 +804,23 @@ class App:
         text = str(label).upper() if upper else str(label)
         return self.theme.paint(text.ljust(12), 'dim') + ' ' + str(value)
 
-    def tool_thermo(self, label, result):
-        if not getattr(result, 'structure_found', False):
-            return self.tool_line(label, self.t['none'])
-        return self.tool_line(
-            label,
-            f'Tm {result.tm:.1f} °C · ΔG {result.dg / 1000.0:.2f} kcal/mol',
-        )
-
     def tool_sequence_lines(self, label, sequence):
         # 40 nt + 13-column label indent fits the 56-column inner box at width 60.
         chunks = [sequence[i:i + 40] for i in range(0, len(sequence), 40)] or ['']
         lines = [self.tool_line(label, chunks[0])]
         for chunk in chunks[1:]:
             lines.append(self.theme.paint(' ' * 13, 'dim') + chunk)
+        return lines
+
+    def tool_rows(self, rows, long_keys=()):
+        lines = []
+        for key, value in rows:
+            if value is None:
+                value = self.t['none']
+            if key in long_keys:
+                lines.extend(self.tool_sequence_lines(self.t[key], value))
+            else:
+                lines.append(self.tool_line(self.t[key], value))
         return lines
 
     def tool_preview_lines(self, label, sequence):
@@ -1039,14 +844,9 @@ class App:
         except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
-        self.tool_output = [
-            self.tool_line(self.t['sequence'], report.sequence),
-            self.tool_line(self.t['length'], f'{report.length} nt'),
-            self.tool_line(self.t['gc'], f'{report.gc:.1f}%'),
-            self.tool_line(self.t['tm'], f'{report.tm:.1f} °C'),
-            self.tool_thermo(self.t['hairpin'], report.hairpin),
-            self.tool_thermo(self.t['homodimer'], report.homodimer),
-        ]
+        self.tool_output = self.tool_rows(
+            tool_reports.primer_rows(report), {'sequence'}
+        )
 
     def tool_pair(self):
         self.tool_output = []
@@ -1061,26 +861,9 @@ class App:
         except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
-        self.tool_output = [
-            self.tool_line(
-                self.t['forward'],
-                f'{report.forward.sequence} · Tm {report.forward.tm:.1f} °C',
-            ),
-            self.tool_line(
-                self.t['reverse_primer'],
-                f'{report.reverse.sequence} · Tm {report.reverse.tm:.1f} °C',
-            ),
-            self.tool_line(
-                self.t['gc'],
-                f'F {report.forward.gc:.1f}% · R {report.reverse.gc:.1f}%',
-            ),
-            self.tool_line(
-                'ΔTm',
-                f'{abs(report.forward.tm - report.reverse.tm):.1f} °C',
-            ),
-            self.tool_thermo(self.t['heterodimer'], report.heterodimer),
-            self.tool_thermo(self.t['end_stability'], report.end_stability),
-        ]
+        self.tool_output = self.tool_rows(
+            tool_reports.pair_rows(report), {'forward', 'reverse_primer'}
+        )
 
     def tool_dna(self):
         self.tool_output = []
@@ -1088,26 +871,14 @@ class App:
         if sequence is None:
             return
         try:
-            sequence = genetics.normalize_dna(sequence)
-            stats = {
-                'length': len(sequence),
-                'gc': genetics.gc_content(sequence),
-                'complement': genetics.complement(sequence),
-                'reverse': genetics.reverse(sequence),
-                'reverse_complement': genetics.reverse_complement(sequence),
-            }
+            rows = tool_reports.dna_rows(sequence)
         except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
 
-        self.tool_output = []
-        self.tool_output.extend(self.tool_sequence_lines(self.t['sequence'], sequence))
-        self.tool_output.append(self.tool_line(self.t['length'], f"{stats['length']} nt"))
-        self.tool_output.append(self.tool_line(self.t['gc'], f"{stats['gc']:.1f}%"))
-        self.tool_output.extend(self.tool_sequence_lines(self.t['complement'], stats['complement']))
-        self.tool_output.extend(self.tool_sequence_lines(self.t['reverse_seq'], stats['reverse']))
-        self.tool_output.extend(
-            self.tool_sequence_lines(self.t['reverse_complement'], stats['reverse_complement'])
+        self.tool_output = self.tool_rows(
+            rows,
+            {'sequence', 'complement', 'reverse_seq', 'reverse_complement'},
         )
 
     def tool_units(self):
@@ -1119,13 +890,12 @@ class App:
         if target is None:
             return
         try:
-            results = genetics.convert_text(value, target)
+            rows = tool_reports.unit_rows(value, target)
         except (genetics.ToolError, OSError, ImportError) as exc:
             self.set_tool_error(exc)
             return
         self.tool_output = [
-            self.tool_line(unit, genetics.format_number(amount), upper=False)
-            for unit, amount in results
+            self.tool_line(unit, amount, upper=False) for unit, amount in rows
         ]
 
     def tool_structure(self):
@@ -1139,16 +909,9 @@ class App:
             self.set_tool_error(exc)
             return
 
-        dg = self.t['none'] if report.dg is None else f'{report.dg:.2f} kcal/mol'
-        tm = self.t['none'] if report.tm is None else f'{report.tm:.1f} °C'
-        self.tool_output = [
-            *self.tool_sequence_lines(self.t['sequence'], report.sequence),
-            self.tool_line(self.t['length'], f'{len(report.sequence)} nt'),
-            self.tool_line(self.t['structure_dg'], dg),
-            self.tool_line(self.t['tm'], tm),
-        ]
-        self.tool_output.extend(
-            self.tool_sequence_lines(self.t['structure_fold'], report.dot_bracket)
+        self.tool_output = self.tool_rows(
+            tool_reports.structure_rows(report),
+            {'sequence', 'structure_fold'},
         )
         if not report.hits:
             self.tool_output.append(self.theme.paint(self.t['structure_none'], 'dim'))
@@ -1164,14 +927,7 @@ class App:
             self.set_tool_error(exc)
             return
 
-        self.tool_output = [
-            self.tool_line(self.t['import_name'], record.name),
-            self.tool_line(self.t['import_format'], record.source_format),
-            self.tool_line(self.t['length'], f'{len(record.sequence)} nt'),
-            self.tool_line(self.t['import_topology'], record.topology),
-            self.tool_line(self.t['import_records'], str(record.record_count)),
-            self.tool_line(self.t['import_features'], str(len(record.features))),
-        ]
+        self.tool_output = self.tool_rows(tool_reports.sequence_rows(record))
         self.tool_output.extend(
             self.tool_preview_lines(self.t['sequence'], record.sequence)
         )
@@ -1187,13 +943,7 @@ class App:
             self.set_tool_error(exc)
             return
 
-        self.tool_output = [
-            self.tool_line(self.t['layout_wells'], str(report.wells)),
-            self.tool_line(
-                self.t['layout_conditions'],
-                ', '.join(report.conditions) or self.t['none'],
-            ),
-        ]
+        self.tool_output = self.tool_rows(tool_reports.layout_rows(report))
 
     def tool_pcr(self):
         self.tool_output = []
@@ -1214,9 +964,8 @@ class App:
             self.set_tool_error(exc)
             return
 
-        self.tool_output = [
-            self.tool_line(self.t['pcr_product'], f'{report.length} nt'),
-        ]
+        rows = [row for row in tool_reports.pcr_rows(report) if row[0] != 'sequence']
+        self.tool_output = self.tool_rows(rows)
         self.tool_output.extend(
             self.tool_preview_lines(self.t['sequence'], report.sequence)
         )
