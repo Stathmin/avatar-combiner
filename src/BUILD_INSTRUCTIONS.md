@@ -2,26 +2,22 @@
 
 ## Быстрая сборка
 
-Запустите скрипт сборки:
+Все команды выполняются через `uv`.
+
 ```bash
-python3 build_binary.py
+uv sync --group build
+cd src
+uv run python build_binary.py
 ```
 
-Скрипт автоматически:
-- Проверит и установит PyInstaller при необходимости
-- Проверит и установит зависимости (openpyxl)
-- Соберёт исполняемый файл в папке `dist/`
+Скрипт соберёт исполняемый файл в `src/dist/`.
 
 ## Ручная сборка
 
-### Установка зависимостей
 ```bash
-pip install -r requirements.txt
-```
-
-### Сборка для Linux
-```bash
-pyinstaller --onefile --name run_pipeline \
+uv sync --group build
+cd src
+uv run pyinstaller --onefile --name аватар_объединитель_4х_планшетов \
   --hidden-import openpyxl \
   --hidden-import extract_plates_from_excel \
   --hidden-import combine_plates \
@@ -29,40 +25,25 @@ pyinstaller --onefile --name run_pipeline \
   run_pipeline.py
 ```
 
-### Сборка для Windows
-```bash
-pyinstaller --onefile --name run_pipeline.exe \
-  --hidden-import openpyxl \
-  --hidden-import extract_plates_from_excel \
-  --hidden-import combine_plates \
-  --collect-all openpyxl \
-  run_pipeline.py
-```
+Для Linux используйте имя без `.exe`, например `avatar_combiner`.
 
 ## Использование
 
-После сборки исполняемый файл будет находиться в папке `dist/`.
+Рядом с исполняемым файлом должны лежать:
 
-**Важно:** Для работы программы необходим файл `config.json` в той же директории, что и исполняемый файл.
-
-### Linux
-```bash
-./dist/run_pipeline
-```
+- `config.json`;
+- Excel-файл, указанный в `config.json`.
 
 ### Windows
+
 ```cmd
-dist\run_pipeline.exe
+dist\аватар_объединитель_4х_планшетов.exe
 ```
 
-## Размер файла
+### Linux
 
-Ожидаемый размер исполняемого файла: ~15-25 MB (зависит от платформы)
-
-## Оптимизация
-
-Для уменьшения размера можно использовать UPX (если установлен):
 ```bash
-pyinstaller --onefile --upx-dir=/path/to/upx ...
+./dist/avatar_combiner
 ```
 
+При каждом запуске создаётся папка `Результат N`. Все CSV и TXT пишутся в неё.

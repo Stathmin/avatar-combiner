@@ -7,6 +7,7 @@
 import csv
 import os
 import sys
+from pathlib import Path
 
 
 def convert_row_interleaved(old_row, plate_num, column):
@@ -33,12 +34,6 @@ def convert_row_interleaved(old_row, plate_num, column):
     new_rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
     
     old_index = old_rows.index(old_row)
-    
-    # Определяем смещение для столбцов
-    if plate_num in [1, 2]:
-        column_offset = 0  # Колонки 1-12
-    else:  # plate_num in [3, 4]
-        column_offset = 12  # Колонки 13-24
     
     # Определяем, нечётный или чётный планшет в паре
     if plate_num in [1, 3]:
@@ -206,14 +201,18 @@ def create_id_list(input_file, output_file):
     print(f"Список ID создан: '{output_file}' ({len(ids)} образцов)")
 
 
-def main():
+def main(output_dir=None, input_dir=None):
     """Основная функция."""
+    output_dir = Path(output_dir) if output_dir else Path('.')
+    input_dir = Path(input_dir) if input_dir else output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Стандартные имена файлов
-    input_files = ['plate1.csv', 'plate2.csv', 'plate3.csv', 'plate4.csv']
-    output_file = 'combined_384_plate.csv'
+    input_files = [input_dir / f'plate{number}.csv' for number in range(1, 5)]
+    output_file = output_dir / 'combined_384_plate.csv'
     
     # Проверка наличия входных файлов
-    missing_files = [f for f in input_files if not os.path.exists(f)]
+    missing_files = [str(f) for f in input_files if not f.exists()]
     if missing_files:
         print(f"Ошибка: следующие файлы не найдены: {', '.join(missing_files)}", file=sys.stderr)
         print("Сначала запустите generate_test_plates.py для создания тестовых данных.", file=sys.stderr)
@@ -222,11 +221,11 @@ def main():
     combine_plates(input_files, output_file)
     
     # Создаём пивот-таблицу
-    pivot_output = 'combined_384_plate_pivot.csv'
+    pivot_output = output_dir / 'combined_384_plate_pivot.csv'
     create_pivot_table(output_file, pivot_output)
     
     # Создаём список ID
-    id_list_output = 'combined_384_plate_ids.txt'
+    id_list_output = output_dir / 'combined_384_plate_ids.txt'
     create_id_list(output_file, id_list_output)
 
 

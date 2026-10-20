@@ -52,7 +52,7 @@ def main():
     for filename, start_id in plates:
         generate_plate(filename, start_id)
     
-    print(f"\nВсего создано: 4 планшета, 384 образца (S001-S384)")
+    print("\nВсего создано: 4 планшета, 384 образца (S001-S384)")
 
 
 if __name__ == '__main__':

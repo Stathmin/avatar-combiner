@@ -10,7 +10,6 @@ Script to fix common errors in cultivar names:
 import re
 import sys
 
-
 # Mapping of Latin letters to Cyrillic equivalents
 LATIN_TO_CYRILLIC = {
     'a': 'а', 'A': 'А',

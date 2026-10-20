@@ -4,10 +4,11 @@
 Читает конфигурацию из config.json и генерирует CSV файлы для каждого планшета.
 """
 
-import json
 import csv
+import json
 import sys
-import os
+from pathlib import Path
+
 from openpyxl import load_workbook
 
 
@@ -130,13 +131,20 @@ def save_metadata_csv(metadata_dict, output_file='metadata.csv'):
     print(f"Создан файл метаданных: {output_file}")
 
 
-def main():
+def main(config_path='config.json', output_dir=None, base_dir=None):
     """Основная функция."""
+    config_path = Path(config_path)
+    base_dir = Path(base_dir) if base_dir else config_path.parent
+    output_dir = Path(output_dir) if output_dir else base_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Читаем конфигурацию
-    config = read_config()
+    config = read_config(config_path)
     
-    excel_file = config['excel_file']
-    if not os.path.exists(excel_file):
+    excel_file = Path(config['excel_file'])
+    if not excel_file.is_absolute():
+        excel_file = base_dir / excel_file
+    if not excel_file.exists():
         print(f"Ошибка: файл '{excel_file}' не найден.", file=sys.stderr)
         sys.exit(1)
     
@@ -152,7 +160,7 @@ def main():
     
     for plate_name, plate_config in config['sheets'].items():
         sheet_name = plate_config['sheet_name']
-        output_file = f"{plate_name}.csv"
+        output_file = output_dir / f"{plate_name}.csv"
         
         # Извлекаем данные
         plate_data, metadata = extract_plate_data(workbook, sheet_name, config)
@@ -169,7 +177,7 @@ def main():
         save_plate_csv(plate_data, output_file)
     
     # Сохраняем метаданные
-    save_metadata_csv(metadata_dict)
+    save_metadata_csv(metadata_dict, output_dir / 'metadata.csv')
     
     print(f"\nОбработано {len(config['sheets'])} планшетов")
 

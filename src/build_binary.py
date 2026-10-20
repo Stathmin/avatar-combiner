@@ -4,51 +4,36 @@
 Создаёт exe на Windows или бинарник на Linux с минимальным набором зависимостей.
 """
 
+import importlib.util
 import os
-import sys
-import subprocess
 import platform
+import subprocess
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def check_pyinstaller():
-    """Проверяет наличие PyInstaller и устанавливает при необходимости."""
-    try:
-        import PyInstaller
+    """Проверяет наличие PyInstaller в uv-окружении."""
+    if importlib.util.find_spec('PyInstaller') is not None:
         print("✓ PyInstaller установлен")
         return True
-    except ImportError:
-        print("PyInstaller не найден. Устанавливаю...")
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyinstaller'])
-            print("✓ PyInstaller установлен")
-            return True
-        except subprocess.CalledProcessError:
-            print("✗ Ошибка при установке PyInstaller", file=sys.stderr)
-            return False
+
+    print(
+        "PyInstaller не найден. Установите группу сборки: uv sync --group build",
+        file=sys.stderr,
+    )
+    return False
 
 
 def check_dependencies():
     """Проверяет наличие необходимых зависимостей."""
-    dependencies = ['openpyxl']
-    missing = []
-    
-    for dep in dependencies:
-        try:
-            __import__(dep)
-            print(f"✓ {dep} установлен")
-        except ImportError:
-            print(f"✗ {dep} не найден")
-            missing.append(dep)
-    
-    if missing:
-        print(f"\nУстанавливаю недостающие зависимости: {', '.join(missing)}")
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install'] + missing)
-            print("✓ Зависимости установлены")
-        except subprocess.CalledProcessError:
-            print("✗ Ошибка при установке зависимостей", file=sys.stderr)
-            return False
-    
+    if importlib.util.find_spec('openpyxl') is None:
+        print("openpyxl не найден. Запустите: uv sync", file=sys.stderr)
+        return False
+
+    print("✓ openpyxl установлен")
     return True
 
 
@@ -56,18 +41,18 @@ def build_binary():
     """Собирает исполняемый файл."""
     system = platform.system()
     script_name = 'run_pipeline.py'
-    
+    os.chdir(SCRIPT_DIR)
+
     if not os.path.exists(script_name):
         print(f"✗ Файл '{script_name}' не найден", file=sys.stderr)
         return False
-    
-    # Определяем имя выходного файла в зависимости от платформы
+
+    # Имя должно совпадать с именем exe из инструкции
     if system == 'Windows':
-        exe_name = 'run_pipeline'
-        icon = None  # Можно добавить иконку для Windows
+        exe_name = 'аватар_объединитель_4х_планшетов'
     else:
-        exe_name = 'run_pipeline'
-        icon = None
+        exe_name = 'avatar_combiner'
+    icon = None
     
     print(f"\n{'='*60}")
     print(f"Сборка исполняемого файла для {system}")
@@ -114,7 +99,7 @@ def build_binary():
         if os.path.exists(output_path):
             size_mb = os.path.getsize(output_path) / (1024 * 1024)
             print(f"\n{'='*60}")
-            print(f"✓ Сборка завершена успешно!")
+            print("✓ Сборка завершена успешно!")
             print(f"  Исполняемый файл: {output_path}")
             print(f"  Размер: {size_mb:.2f} MB")
             print(f"{'='*60}\n")
@@ -144,7 +129,7 @@ def main():
     # Собираем бинарник
     if build_binary():
         print("\nГотово! Исполняемый файл находится в папке 'dist'")
-        print("\nПримечание: Для работы программы необходим файл config.json")
+        print("\nПримечание: для работы программы нужен config.json")
         print("в той же директории, что и исполняемый файл.")
     else:
         sys.exit(1)
