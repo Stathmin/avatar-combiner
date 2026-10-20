@@ -1,5 +1,6 @@
 import json
 
+import pcr_tools
 import ui
 
 
@@ -100,3 +101,104 @@ def test_tools_screen_and_navigation(tmp_path):
 
     app.handle_key('b')
     assert app.screen == 'home'
+
+
+def test_tools_hub_lists_all_groups(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    text = plain(app.render_tools(100, 30))
+
+    assert 'INSPECT' in text
+    assert 'STRUCTURE' in text
+    assert 'FILES' in text
+    for key in ('[5]', '[6]', '[7]', '[8]', '[9]'):
+        assert key in text
+
+
+def test_tools_hub_dispatches_new_keys(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    calls = []
+    for name in ('tool_structure', 'tool_import', 'tool_layout', 'tool_pcr', 'tool_xlsx'):
+        monkeypatch.setattr(app, name, lambda name=name: calls.append(name))
+
+    for key in '56789':
+        app.handle_tools_key(key)
+
+    assert calls == [
+        'tool_structure',
+        'tool_import',
+        'tool_layout',
+        'tool_pcr',
+        'tool_xlsx',
+    ]
+
+
+def test_structure_tool_renders_report(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: 'ACGTACGTACGT')
+
+    app.tool_structure()
+    text = plain(app.tool_output)
+
+    assert 'kcal/mol' in text
+    assert '((((....))))' in text
+    assert '12 nt' in text
+
+
+def test_layout_tool_renders_wells(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    path = tmp_path / 'plate.toml'
+    path.write_text('[well.A1]\nsample = "soy1"\n', encoding='utf-8')
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: str(path))
+
+    app.tool_layout()
+    text = plain(app.tool_output)
+
+    assert '1' in text
+    assert 'sample' in text
+
+
+def test_pcr_tool_renders_product(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: 'ACGT')
+    monkeypatch.setattr(
+        pcr_tools,
+        'simulate_pcr',
+        lambda *args: pcr_tools.PcrReport(200, 'ACGT', 'ACGT', 'ACGT'),
+    )
+
+    app.tool_pcr()
+    text = plain(app.tool_output)
+
+    assert '200 nt' in text
+
+
+def test_xlsx_tool_writes_workbook(tmp_path, monkeypatch):
+    app = make_app(tmp_path, lang='en')
+    result_dir = tmp_path / 'Результат 1'
+    result_dir.mkdir()
+    (result_dir / 'combined_384_plate.csv').write_text('A\n1\n', encoding='utf-8')
+    monkeypatch.setattr(app, 'prompt_text', lambda *args, **kwargs: str(result_dir))
+
+    app.tool_xlsx()
+
+    assert (result_dir / 'combined_384_plate.xlsx').is_file()
+
+
+def test_ui_does_not_import_heavy_modules_at_startup():
+    import subprocess
+    import sys
+
+    code = (
+        'import sys, ui; '
+        "print(any(m in sys.modules for m in "
+        "['pandas', 'wellmap', 'pydna', 'openpyxl']))"
+    )
+    output = subprocess.run(
+        [sys.executable, '-c', code],
+        cwd='src',
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert output.stdout.strip() == 'False'

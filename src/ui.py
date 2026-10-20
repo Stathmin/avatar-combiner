@@ -18,7 +18,12 @@ import time
 from contextlib import redirect_stderr
 from pathlib import Path
 
+import pcr_tools
+import plate_layout
+import report_xlsx
 import run_pipeline
+import seq_import
+import seq_structure
 import tools as genetics
 from run_pipeline import __version__, application_dir, next_result_number
 
@@ -93,13 +98,41 @@ TEXT = {
         'open_last': 'Open last result',
         'config': 'Config',
         'help': 'Help',
-        'tools': 'Genetics tools',
+        'tools': 'Genetics',
+        'group_inspect': 'INSPECT',
+        'group_structure': 'STRUCTURE',
+        'group_files': 'FILES',
         'tool_tm': 'Primer Tm',
         'tool_pair': 'Primer pair',
         'tool_dna': 'Complement / reverse complement',
         'tool_units': 'Unit converter',
+        'tool_structure': 'Oligo structure',
+        'tool_import': 'Import sequence file',
+        'tool_layout': 'Validate plate layout',
+        'tool_pcr': 'In-silico PCR',
+        'tool_xlsx': 'Export result to XLSX',
+        'structure_hint': 'ACGT only. Hairpins and self-dimers.',
+        'structure_dg': 'ΔG',
+        'structure_fold': 'Fold',
+        'structure_none': 'no stable structure',
+        'import_name': 'Name',
+        'import_path': 'File path',
+        'import_format': 'Format',
+        'import_topology': 'Topology',
+        'import_records': 'Records',
+        'import_features': 'Features',
+        'import_hint': '.gb .gbk .dna .fa .fasta',
+        'layout_hint': 'Path to a wellmap .toml',
+        'layout_wells': 'Wells',
+        'layout_conditions': 'Conditions',
+        'pcr_template': 'Template',
+        'pcr_forward': 'Forward',
+        'pcr_reverse': 'Reverse',
+        'pcr_product': 'Product',
+        'xlsx_hint': 'Path to a «Результат N» folder',
+        'xlsx_done': 'Saved',
         'tool_result': 'RESULT',
-        'tool_footer': '1 Tm  ·  2 pair  ·  3 DNA  ·  4 units  ·  B back',
+        'tool_footer': '1–4 inspect  ·  5–8 analyse  ·  6–9 files  ·  B back',
         'prompt_footer': 'Enter confirm  ·  Esc cancel  ·  Ctrl+U clear',
         'sequence': 'Sequence',
         'length': 'Length',
@@ -160,13 +193,41 @@ TEXT = {
         'open_last': 'Открыть последний',
         'config': 'Настройки',
         'help': 'Помощь',
-        'tools': 'Инструменты генетика',
+        'tools': 'Генетика',
+        'group_inspect': 'ПРОВЕРКА',
+        'group_structure': 'СТРУКТУРА',
+        'group_files': 'ФАЙЛЫ',
         'tool_tm': 'Tm праймера',
         'tool_pair': 'Пара праймеров',
         'tool_dna': 'Комплемент / обратный комплемент',
         'tool_units': 'Конвертер единиц',
+        'tool_structure': 'Структура олиго',
+        'tool_import': 'Импорт файла',
+        'tool_layout': 'Проверить раскладку',
+        'tool_pcr': 'ПЦР in silico',
+        'tool_xlsx': 'Экспорт в XLSX',
+        'structure_hint': 'Только ACGT. Шпильки и самодимеры.',
+        'structure_dg': 'ΔG',
+        'structure_fold': 'Складка',
+        'structure_none': 'нет устойчивой структуры',
+        'import_name': 'Название',
+        'import_path': 'Путь к файлу',
+        'import_format': 'Формат',
+        'import_topology': 'Топология',
+        'import_records': 'Записей',
+        'import_features': 'Признаки',
+        'import_hint': '.gb .gbk .dna .fa .fasta',
+        'layout_hint': 'Путь к .toml wellmap',
+        'layout_wells': 'Лунок',
+        'layout_conditions': 'Условия',
+        'pcr_template': 'Матрица',
+        'pcr_forward': 'Прямой',
+        'pcr_reverse': 'Обратный',
+        'pcr_product': 'Продукт',
+        'xlsx_hint': 'Путь к папке «Результат N»',
+        'xlsx_done': 'Сохранено',
         'tool_result': 'РЕЗУЛЬТАТ',
-        'tool_footer': '1 Tm  ·  2 пара  ·  3 ДНК  ·  4 единицы  ·  B назад',
+        'tool_footer': '1–4 проверка  ·  5–8 анализ  ·  6–9 файлы  ·  B назад',
         'prompt_footer': 'Enter подтвердить  ·  Esc отмена  ·  Ctrl+U очистить',
         'sequence': 'Последовательность',
         'length': 'Длина',
@@ -772,11 +833,37 @@ class App:
     def render_tools(self, width, height):
         lines = self.header(width)
         lines.append('')
+        inner = width - 4
         actions = [
-            self.theme.paint('[1]', 'accent', bold=True) + ' ' + self.t['tool_tm'],
-            self.theme.paint('[2]', 'accent', bold=True) + ' ' + self.t['tool_pair'],
-            self.theme.paint('[3]', 'accent2', bold=True) + ' ' + self.t['tool_dna'],
-            self.theme.paint('[4]', 'accent2', bold=True) + ' ' + self.t['tool_units'],
+            self.theme.paint(self.t['group_inspect'], 'dim', bold=True),
+            self.tool_menu_row(
+                [('1', self.t['tool_tm'], 'accent'), ('2', self.t['tool_pair'], 'accent')],
+                inner,
+            ),
+            self.tool_menu_row(
+                [('3', self.t['tool_dna'], 'accent'), ('4', self.t['tool_units'], 'accent')],
+                inner,
+            ),
+            '',
+            self.theme.paint(self.t['group_structure'], 'dim', bold=True),
+            self.tool_menu_row(
+                [
+                    ('5', self.t['tool_structure'], 'accent2'),
+                    ('8', self.t['tool_pcr'], 'accent2'),
+                ],
+                inner,
+            ),
+            '',
+            self.theme.paint(self.t['group_files'], 'dim', bold=True),
+            self.tool_menu_row(
+                [
+                    ('6', self.t['tool_import'], 'accent2'),
+                    ('7', self.t['tool_layout'], 'accent2'),
+                ],
+                inner,
+            ),
+            self.tool_menu_row([('9', self.t['tool_xlsx'], 'accent2')], inner),
+            '',
             self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
         ]
         lines.extend(box(self.t['tools'], actions, width, self.theme))
@@ -788,6 +875,14 @@ class App:
         lines.append('')
         lines.extend(self.footer_lines(width, self.t['tool_footer']))
         return lines
+
+    def tool_menu_row(self, items, width):
+        column = max(20, (width - 2) // 2)
+        cells = [
+            self.menu_item((key, '', label, role), column)
+            for key, label, role in items
+        ]
+        return pad(cells[0], column) + '  ' + (cells[1] if len(cells) > 1 else '')
 
     def prompt_text(self, title, hint=None):
         value = ''
@@ -942,6 +1037,109 @@ class App:
         self.tool_output = [
             self.tool_line(unit, genetics.format_number(amount), upper=False)
             for unit, amount in results
+        ]
+
+    def tool_structure(self):
+        self.tool_output = []
+        sequence = self.prompt_text(self.t['tool_structure'], self.t['structure_hint'])
+        if sequence is None:
+            return
+        try:
+            report = seq_structure.analyze_structure(sequence)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        dg = self.t['none'] if report.dg is None else f'{report.dg:.2f} kcal/mol'
+        tm = self.t['none'] if report.tm is None else f'{report.tm:.1f} °C'
+        self.tool_output = [
+            self.tool_line(self.t['sequence'], report.sequence),
+            self.tool_line(self.t['length'], f'{len(report.sequence)} nt'),
+            self.tool_line(self.t['structure_dg'], dg),
+            self.tool_line(self.t['tm'], tm),
+        ]
+        self.tool_output.extend(
+            self.tool_sequence_lines(self.t['structure_fold'], report.dot_bracket)
+        )
+        if not report.hits:
+            self.tool_output.append(self.theme.paint(self.t['structure_none'], 'dim'))
+
+    def tool_import(self):
+        self.tool_output = []
+        path = self.prompt_text(self.t['import_path'], self.t['import_hint'])
+        if path is None:
+            return
+        try:
+            record = seq_import.load_sequence(path)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        self.tool_output = [
+            self.tool_line(self.t['import_name'], record.name),
+            self.tool_line(self.t['import_format'], record.source_format),
+            self.tool_line(self.t['length'], f'{len(record.sequence)} nt'),
+            self.tool_line(self.t['import_topology'], record.topology),
+            self.tool_line(self.t['import_records'], str(record.record_count)),
+            self.tool_line(self.t['import_features'], str(len(record.features))),
+        ]
+        self.tool_output.extend(
+            self.tool_sequence_lines(self.t['sequence'], record.sequence[:60])
+        )
+
+    def tool_layout(self):
+        self.tool_output = []
+        path = self.prompt_text(self.t['tool_layout'], self.t['layout_hint'])
+        if path is None:
+            return
+        try:
+            report = plate_layout.load_layout(path)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        self.tool_output = [
+            self.tool_line(self.t['layout_wells'], str(report.wells)),
+            self.tool_line(
+                self.t['layout_conditions'],
+                ', '.join(report.conditions) or self.t['none'],
+            ),
+        ]
+
+    def tool_pcr(self):
+        self.tool_output = []
+        values = []
+        for title in (self.t['pcr_template'], self.t['pcr_forward'], self.t['pcr_reverse']):
+            value = self.prompt_text(title, self.t['primer_hint'])
+            if value is None:
+                return
+            values.append(value)
+        try:
+            report = pcr_tools.simulate_pcr(*values)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        self.tool_output = [
+            self.tool_line(self.t['pcr_product'], f'{report.length} nt'),
+        ]
+        self.tool_output.extend(
+            self.tool_sequence_lines(self.t['sequence'], report.sequence[:60])
+        )
+
+    def tool_xlsx(self):
+        self.tool_output = []
+        path = self.prompt_text(self.t['tool_xlsx'], self.t['xlsx_hint'])
+        if path is None:
+            return
+        try:
+            output = report_xlsx.export_workbook(path)
+        except Exception as exc:
+            self.set_tool_error(exc)
+            return
+
+        self.tool_output = [
+            self.tool_line(self.t['xlsx_done'], str(output)),
         ]
 
     def render_results(self, width, height):
@@ -1100,6 +1298,16 @@ class App:
             self.tool_dna()
         elif key == '4':
             self.tool_units()
+        elif key == '5':
+            self.tool_structure()
+        elif key == '6':
+            self.tool_import()
+        elif key == '7':
+            self.tool_layout()
+        elif key == '8':
+            self.tool_pcr()
+        elif key == '9':
+            self.tool_xlsx()
 
     def handle_results_key(self, key):
         if key in ('b', 'B'):
