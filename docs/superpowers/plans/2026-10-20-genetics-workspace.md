@@ -14,7 +14,7 @@
 
 - Python floor is `>=3.13`; `.python-version` already says `3.13`.
 - Allowed runtime deps: `biopython>=1.87`, `pint>=0.24.4`, `primer3-py>=2.3.1`, `seqfold>=0.10.2`, `snapgene_reader>=0.1.23`, `pandas>=2.2`, `openpyxl>=3.1.5`, `wellmap>=3.5.2`, `pydna>=5.5.16`.
-- pandas and openpyxl are allowed. Keep the bundle compact with PyInstaller excludes (`pandas.tests`, `pandas.plotting`, `matplotlib`, `PIL`), not by removing functionality.
+- pandas and openpyxl are allowed. Keep the bundle compact with PyInstaller excludes (`pandas.tests`, `pandas.io.clipboard`), not by removing functionality. `matplotlib` and `PIL` stay in the bundle because `wellmap` imports matplotlib eagerly.
 - Do not import pandas, wellmap, pydna or openpyxl at module import time from a TUI-loaded module. Import them inside the function that needs them.
 - TUI uses only the standard library and existing `Theme` tokens. No Textual, Rich, or new colour values.
 - Every user-facing string goes into both `TEXT['en']` and `TEXT['ru']`.
@@ -1284,11 +1284,19 @@ In `src/build_binary.py` add after the existing `tools` entries:
         '--hidden-import', 'wellmap',
         '--hidden-import', 'pydna',
         '--hidden-import', 'openpyxl',
+        '--collect-all', 'pydna',
+        '--collect-all', 'wellmap',
+        '--collect-all', 'pydivsufsort',
+        '--collect-all', 'seguid',
+        '--collect-all', 'sgffp',
 ```
 
-Remove the exclusion pairs for `numpy` and `pandas`; keep `matplotlib` and
-`PIL` excluded. Remove `urllib` from the exclusion list. Keep `tkinter`,
+Remove the exclusion pairs for `matplotlib`, `numpy`, `pandas`, `PIL` and `urllib`.
+`wellmap` imports matplotlib eagerly, matplotlib needs Pillow, and
+`snapgene_reader` -> `html2text` imports `urllib.parse`. Keep `tkinter`,
 `pytest`, `ruff`, `pip`, `setuptools`, `pkg_resources`, `unittest`.
+Also remove `Bio.SeqIO`, `Bio.SeqRecord` and `Bio.restriction` from the
+exclusion list: pydna imports them for PCR. Keep the other Bio excludes.
 
 Add compact pandas excludes:
 
@@ -1319,7 +1327,8 @@ Extend the tools table with keys 5–9 and replace the runtime paragraph with:
 Рантайм: Bio.Seq и SeqIO для последовательностей, Pint для единиц,
 Primer3-py для термодинамики, seqfold для структуры олиго, pydna для ПЦР
 in silico, wellmap для раскладок, pandas и openpyxl для таблиц и XLSX.
-В сборке исключены тесты pandas, plotting и matplotlib.
+В сборке исключены только тесты pandas; matplotlib входит в сборку, потому
+что его импортирует wellmap.
 ```
 
 Update the Python requirement line to `Python 3.13+`.
