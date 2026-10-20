@@ -25,6 +25,7 @@ def test_exports_result_folder(tmp_path):
     assert workbook['combined']['B2'].value == 2
     assert workbook['combined'].freeze_panes == 'A2'
     assert workbook['combined']['A1'].font.bold is True
+    assert not (result_dir / 'combined_384_plate.tmp.xlsx').exists()
 
 
 def test_missing_folder_is_rejected(tmp_path):
@@ -38,3 +39,17 @@ def test_folder_without_csv_is_rejected(tmp_path):
 
     with pytest.raises(tools.ToolError, match='no CSV files'):
         report_xlsx.export_workbook(result_dir)
+
+
+def test_malformed_csv_becomes_tool_error(tmp_path):
+    result_dir = tmp_path / 'broken'
+    result_dir.mkdir()
+    (result_dir / 'combined_384_plate.csv').write_text(
+        'a,b\n"unterminated\n', encoding='utf-8'
+    )
+
+    with pytest.raises(tools.ToolError, match='cannot export'):
+        report_xlsx.export_workbook(result_dir)
+
+    assert not (result_dir / 'combined_384_plate.xlsx').exists()
+    assert not (result_dir / 'combined_384_plate.tmp.xlsx').exists()

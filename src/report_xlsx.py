@@ -21,7 +21,7 @@ SHEETS = (
 )
 
 
-def export_workbook(result_dir):
+def export_workbook(result_dir) -> Path:
     """Write available CSV files from a result folder into one XLSX."""
     result_dir = Path(result_dir)
     if not result_dir.is_dir():
@@ -41,18 +41,31 @@ def export_workbook(result_dir):
     from openpyxl.utils import get_column_letter
 
     output = result_dir / 'combined_384_plate.xlsx'
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for sheet, path in available:
-            pd.read_csv(path).to_excel(writer, sheet_name=sheet, index=False)
+    tmp_output = output.with_suffix('.tmp.xlsx')
+    try:
+        with pd.ExcelWriter(tmp_output, engine='openpyxl') as writer:
+            for sheet, path in available:
+                pd.read_csv(path).to_excel(writer, sheet_name=sheet, index=False)
 
-    workbook = load_workbook(output)
-    for sheet in workbook.worksheets:
-        sheet.freeze_panes = 'A2'
-        for cell in sheet[1]:
-            cell.font = Font(bold=True)
-        for column in sheet.columns:
-            width = max(len(str(cell.value or '')) for cell in column) + 2
-            sheet.column_dimensions[get_column_letter(column[0].column)].width = min(width, 40)
-    workbook.save(output)
+        workbook = load_workbook(tmp_output)
+        for sheet in workbook.worksheets:
+            sheet.freeze_panes = 'A2'
+            for cell in sheet[1]:
+                cell.font = Font(bold=True)
+            for column in sheet.columns:
+                width = max(
+                    len(str(cell.value if cell.value is not None else ''))
+                    for cell in column
+                ) + 2
+                sheet.column_dimensions[get_column_letter(column[0].column)].width = min(width, 40)
+        workbook.save(tmp_output)
+        tmp_output.replace(output)
+    except ToolError:
+        tmp_output.unlink(missing_ok=True)
+        raise
+    except Exception as exc:
+        tmp_output.unlink(missing_ok=True)
+        detail = str(exc).splitlines()[0]
+        raise ToolError(f'cannot export {result_dir.name}: {detail}') from exc
 
     return output
