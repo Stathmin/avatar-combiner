@@ -132,7 +132,7 @@ TEXT = {
         'xlsx_hint': 'Path to a «Результат N» folder',
         'xlsx_done': 'Saved',
         'tool_result': 'RESULT',
-        'tool_footer': '1–4 inspect  ·  5–8 analyse  ·  6–9 files  ·  B back',
+        'tool_footer': '1–4 inspect  ·  5/8 structure  ·  6/7/9 files  ·  B back',
         'prompt_footer': 'Enter confirm  ·  Esc cancel  ·  Ctrl+U clear',
         'sequence': 'Sequence',
         'length': 'Length',
@@ -227,7 +227,7 @@ TEXT = {
         'xlsx_hint': 'Путь к папке «Результат N»',
         'xlsx_done': 'Сохранено',
         'tool_result': 'РЕЗУЛЬТАТ',
-        'tool_footer': '1–4 проверка  ·  5–8 анализ  ·  6–9 файлы  ·  B назад',
+        'tool_footer': '1–4 проверка  ·  5/8 структура  ·  6/7/9 файлы  ·  B назад',
         'prompt_footer': 'Enter подтвердить  ·  Esc отмена  ·  Ctrl+U очистить',
         'sequence': 'Последовательность',
         'length': 'Длина',
@@ -834,46 +834,65 @@ class App:
         lines = self.header(width)
         lines.append('')
         inner = width - 4
-        actions = [
-            self.theme.paint(self.t['group_inspect'], 'dim', bold=True),
-            self.tool_menu_row(
-                [('1', self.t['tool_tm'], 'accent'), ('2', self.t['tool_pair'], 'accent')],
-                inner,
-            ),
-            self.tool_menu_row(
-                [('3', self.t['tool_dna'], 'accent'), ('4', self.t['tool_units'], 'accent')],
-                inner,
-            ),
-            '',
-            self.theme.paint(self.t['group_structure'], 'dim', bold=True),
-            self.tool_menu_row(
-                [
-                    ('5', self.t['tool_structure'], 'accent2'),
-                    ('8', self.t['tool_pcr'], 'accent2'),
-                ],
-                inner,
-            ),
-            '',
-            self.theme.paint(self.t['group_files'], 'dim', bold=True),
-            self.tool_menu_row(
-                [
-                    ('6', self.t['tool_import'], 'accent2'),
-                    ('7', self.t['tool_layout'], 'accent2'),
-                ],
-                inner,
-            ),
-            self.tool_menu_row([('9', self.t['tool_xlsx'], 'accent2')], inner),
-            '',
-            self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
-        ]
-        lines.extend(box(self.t['tools'], actions, width, self.theme))
+        if self.tool_output and height < 30:
+            lines.append(self.theme.paint(self.t['tools'], 'dim', bold=True))
+            tools = [
+                ('1', self.t['tool_tm']),
+                ('2', self.t['tool_pair']),
+                ('3', self.t['tool_dna']),
+                ('4', self.t['tool_units']),
+                ('5', self.t['tool_structure']),
+                ('6', self.t['tool_import']),
+                ('7', self.t['tool_layout']),
+                ('8', self.t['tool_pcr']),
+                ('9', self.t['tool_xlsx']),
+                ('B', self.t['back']),
+            ]
+            listing = ' · '.join(f'{key} {label}' for key, label in tools)
+            for line in wrap(listing, inner):
+                lines.append(self.theme.paint(line, 'muted'))
+        else:
+            actions = [
+                self.theme.paint(self.t['group_inspect'], 'dim', bold=True),
+                self.tool_menu_row(
+                    [('1', self.t['tool_tm'], 'accent'), ('2', self.t['tool_pair'], 'accent')],
+                    inner,
+                ),
+                self.tool_menu_row(
+                    [('3', self.t['tool_dna'], 'accent'), ('4', self.t['tool_units'], 'accent')],
+                    inner,
+                ),
+                '',
+                self.theme.paint(self.t['group_structure'], 'dim', bold=True),
+                self.tool_menu_row(
+                    [
+                        ('5', self.t['tool_structure'], 'accent2'),
+                        ('8', self.t['tool_pcr'], 'accent2'),
+                    ],
+                    inner,
+                ),
+                '',
+                self.theme.paint(self.t['group_files'], 'dim', bold=True),
+                self.tool_menu_row(
+                    [
+                        ('6', self.t['tool_import'], 'accent2'),
+                        ('7', self.t['tool_layout'], 'accent2'),
+                    ],
+                    inner,
+                ),
+                self.tool_menu_row([('9', self.t['tool_xlsx'], 'accent2')], inner),
+                '',
+                self.theme.paint('[B]', 'muted', bold=True) + ' ' + self.t['back'],
+            ]
+            lines.extend(box(self.t['tools'], actions, width, self.theme))
 
         if self.tool_output:
             lines.append('')
             lines.extend(box(self.t['tool_result'], self.tool_output, width, self.theme))
 
-        lines.append('')
-        lines.extend(self.footer_lines(width, self.t['tool_footer']))
+        if height - len(lines) >= 2:
+            lines.append('')
+            lines.extend(self.footer_lines(width, self.t['tool_footer']))
         return lines
 
     def tool_menu_row(self, items, width):
@@ -1084,7 +1103,7 @@ class App:
             self.tool_line(self.t['import_features'], str(len(record.features))),
         ]
         self.tool_output.extend(
-            self.tool_sequence_lines(self.t['sequence'], record.sequence[:60])
+            self.tool_sequence_lines(self.t['sequence'], record.sequence)
         )
 
     def tool_layout(self):
@@ -1124,7 +1143,7 @@ class App:
             self.tool_line(self.t['pcr_product'], f'{report.length} nt'),
         ]
         self.tool_output.extend(
-            self.tool_sequence_lines(self.t['sequence'], report.sequence[:60])
+            self.tool_sequence_lines(self.t['sequence'], report.sequence)
         )
 
     def tool_xlsx(self):

@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pcr_tools
 import ui
@@ -196,9 +197,19 @@ def test_ui_does_not_import_heavy_modules_at_startup():
     )
     output = subprocess.run(
         [sys.executable, '-c', code],
-        cwd='src',
+        cwd=Path(__file__).resolve().parents[1] / 'src',
         capture_output=True,
         text=True,
         check=True,
     )
     assert output.stdout.strip() == 'False'
+
+
+def test_tools_hub_compact_when_height_is_short(tmp_path):
+    app = make_app(tmp_path, lang='en')
+    app.tool_output = [f'line {index}' for index in range(8)]
+
+    lines = app.render_tools(80, 24)
+
+    assert len(lines) <= 24
+    assert 'RESULT' in plain(lines)
