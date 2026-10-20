@@ -20,18 +20,29 @@ class PcrReport:
 
 
 def simulate_pcr(template, forward, reverse, circular=False):
-    """Return the product of a PCR on a template."""
+    """Return the product of a PCR on a template.
+
+    ``PcrReport.sequence`` is the linearised amplicon starting at the forward
+    primer and ending at the reverse primer, so template flanks are excluded.
+    """
+    try:
+        from pydna.amplify import pcr
+        from pydna.dseqrecord import Dseqrecord
+    except ImportError as exc:
+        raise ToolError('pydna is not available') from exc
+
+    if not isinstance(circular, bool):
+        raise ToolError('circular must be True or False')
+
     template = normalize_primer(template)
     forward = normalize_primer(forward)
     reverse = normalize_primer(reverse)
 
     try:
-        from pydna.amplify import pcr
-        from pydna.dseqrecord import Dseqrecord
-
         amplicon = pcr(forward, reverse, Dseqrecord(template, circular=circular))
-    except Exception as exc:
-        raise ToolError(f'no PCR product: {exc}') from exc
+    except ValueError as exc:
+        detail = str(exc).splitlines()[0]
+        raise ToolError(f'no PCR product: {detail}') from exc
 
     return PcrReport(
         length=len(amplicon),
