@@ -47,7 +47,7 @@ uv run pyinstaller --onefile --optimize 2 \
 `Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas` и
 `openpyxl`.
 
-Если в системе есть `upx`, скрипт автоматически включает сжатие. UPX может вызывать
+PyInstaller применяет UPX только на Windows; на Linux он отключён из-за проблем совместимости. UPX может вызывать
 ложные срабатывания антивируса, поэтому это опция, а не требование.
 
 ## Использование

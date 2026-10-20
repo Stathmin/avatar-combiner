@@ -94,15 +94,51 @@ def build_binary():
         '--hidden-import', 'wellmap',
         '--hidden-import', 'pydna',
         '--hidden-import', 'openpyxl',
-        '--collect-all', 'pydna',
-        '--collect-all', 'wellmap',
-        '--collect-all', 'pydivsufsort',
-        '--collect-all', 'seguid',
-        '--collect-all', 'sgffp',
+        # pydna.amplify only needs this subset; collect-all pulls the gel module
+        # (matplotlib plotting) and other unused submodules.
+        '--hidden-import', 'pydna.amplify',
+        '--hidden-import', 'pydna.dseqrecord',
+        '--hidden-import', 'pydna.dseq',
+        '--hidden-import', 'pydna.seq',
+        '--hidden-import', 'pydna.seqrecord',
+        '--hidden-import', 'pydna.amplicon',
+        '--hidden-import', 'pydna.primer',
+        '--hidden-import', 'pydna.tm',
+        '--hidden-import', 'pydna.alphabet',
+        '--hidden-import', 'pydna.codon',
+        '--hidden-import', 'pydna.common_sub_strings',
+        '--hidden-import', 'pydna.crispr',
+        '--hidden-import', 'pydna.opencloning_models',
+        '--hidden-import', 'pydna.types',
+        '--hidden-import', 'pydna.utils',
+        '--hidden-import', 'seguid',
         # Исключаем только заведомо необязательные модули, чтобы уменьшить размер.
         # Библиотеки stdlib, которые могут понадобиться во время работы
         # (unittest, concurrent, http, ssl, xml.dom), не исключаем.
         '--exclude-module', 'pandas.tests',
+        '--exclude-module', 'matplotlib.tests',
+        '--exclude-module', 'matplotlib.testing',
+        '--exclude-module', 'pydna.gel',
+        '--exclude-module', 'matplotlib.backends.backend_pdf',
+        '--exclude-module', 'matplotlib.backends.backend_ps',
+        '--exclude-module', 'matplotlib.backends.backend_svg',
+        '--exclude-module', 'matplotlib.backends.backend_pgf',
+        '--exclude-module', 'matplotlib.backends.backend_template',
+        '--exclude-module', 'matplotlib.backends.backend_macosx',
+        '--exclude-module', 'matplotlib.backends.backend_qtagg',
+        '--exclude-module', 'matplotlib.backends.backend_qtcairo',
+        '--exclude-module', 'matplotlib.backends.backend_qt5agg',
+        '--exclude-module', 'matplotlib.backends.backend_qt5cairo',
+        '--exclude-module', 'matplotlib.backends.backend_gtk3agg',
+        '--exclude-module', 'matplotlib.backends.backend_gtk3cairo',
+        '--exclude-module', 'matplotlib.backends.backend_gtk4agg',
+        '--exclude-module', 'matplotlib.backends.backend_gtk4cairo',
+        '--exclude-module', 'matplotlib.backends.backend_tkagg',
+        '--exclude-module', 'matplotlib.backends.backend_tkcairo',
+        '--exclude-module', 'matplotlib.backends.backend_webagg',
+        '--exclude-module', 'matplotlib.backends.backend_webagg_core',
+        '--exclude-module', 'matplotlib.backends.backend_nbagg',
+        '--exclude-module', 'matplotlib.backends.backend_cairo',
         '--exclude-module', 'tkinter',
         '--exclude-module', 'pytest',
         '--exclude-module', 'ruff',
@@ -123,7 +159,7 @@ def build_binary():
     upx = shutil.which('upx')
     if upx:
         print(f"✓ UPX: {upx}")
-        cmd.extend(['--upx-dir', str(Path(upx).resolve().parent)])
+        cmd[-1:-1] = ['--upx-dir', str(Path(upx).resolve().parent)]
     else:
         print("UPX не найден; сборка без дополнительного сжатия")
 
@@ -132,7 +168,7 @@ def build_binary():
     
     # Добавляем иконку для Windows, если указана
     if icon and os.path.exists(icon):
-        cmd.extend(['--icon', icon])
+        cmd[-1:-1] = ['--icon', icon]
     
     try:
         print("Запуск PyInstaller...")

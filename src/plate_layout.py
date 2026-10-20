@@ -30,6 +30,9 @@ def load_layout(path):
         raise ToolError(f'file not found: {path}')
 
     try:
+        import os
+
+        os.environ.setdefault('MPLBACKEND', 'Agg')
         from wellmap import load as load_wellmap
 
         frame = load_wellmap(str(path))
