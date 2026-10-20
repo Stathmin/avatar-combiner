@@ -8,9 +8,13 @@
 ## Intent
 
 Turn the flat four-item Tools screen into a small genetics workspace that can
-grow without becoming a list of 100 buttons. Version 1 adds two capabilities
+grow without becoming a list of 100 buttons. Version 1 adds five capabilities
 and reorganises the existing four. Everything else stays out until it earns a
 slot.
+
+The project floor is Python 3.13. pandas, openpyxl, wellmap and pydna are
+allowed; the bundle is kept compact by excluding test and plotting modules,
+not by banning table libraries.
 
 ## Principles
 
@@ -35,7 +39,10 @@ Home
     ├── [3] DNA transforms       inspect
     ├── [4] Units                inspect
     ├── [5] Oligo structure      analyse  (new)
-    └── [6] Import sequence      files    (new)
+    ├── [6] Import sequence      files    (new)
+    ├── [7] Plate layout          files    (new)
+    ├── [8] In-silico PCR        analyse  (new)
+    └── [9] Export XLSX          files    (new)
 ```
 
 Future modules get a numbered slot only when implemented. Until then they are
@@ -55,7 +62,11 @@ shipped screen.
 │ [3] DNA transforms         [4] Units                                   │
 │                                                                        │
 │ STRUCTURE & FILES                                                      │
-│ [5] Oligo structure        [6] Import sequence file                    │
+│ [5] Oligo structure        [8] In-silico PCR                           │
+│                                                                        │
+│ FILES                                                                  │
+│ [6] Import sequence file   [7] Plate layout                            │
+│ [9] Export XLSX                                                        │
 │                                                                        │
 │ [B] Back                                                               │
 └────────────────────────────────────────────────────────────────────────┘
@@ -87,7 +98,9 @@ Rules:
 | `1`–`4` | run / results / open / config | inspect tools | literal |
 | `5` | help | oligo structure | literal |
 | `6` | language | import sequence | literal |
-| `7` | genetics | — | literal |
+| `7` | genetics | plate layout | literal |
+| `8` | — | in-silico PCR | literal |
+| `9` | — | export XLSX | literal |
 | `↑` `↓` | — | reserved for future list | — |
 | `Enter` | run | confirm | confirm |
 | `Esc` / `B` | — | back to home | cancel |
@@ -158,7 +171,19 @@ New keys for `TEXT['en']` and `TEXT['ru']`.
 | `import_records` | Records | Записей |
 | `import_features` | Features | Признаки |
 | `import_hint` | .gb .gbk .dna .fa .fasta | .gb .gbk .dna .fa .fasta |
-| `tool_footer` | 1–4 inspect · 5 structure · 6 import · B back | 1–4 проверка · 5 структура · 6 импорт · B назад |
+| `tool_layout` | Validate plate layout | Проверить раскладку |
+| `layout_hint` | Path to a wellmap .toml | Путь к .toml wellmap |
+| `layout_wells` | Wells | Лунок |
+| `layout_conditions` | Conditions | Условия |
+| `tool_pcr` | In-silico PCR | ПЦР in silico |
+| `pcr_template` | Template | Матрица |
+| `pcr_forward` | Forward | Прямой |
+| `pcr_reverse` | Reverse | Обратный |
+| `pcr_product` | Product | Продукт |
+| `tool_xlsx` | Export result to XLSX | Экспорт в XLSX |
+| `xlsx_hint` | Path to a «Результат N» folder | Путь к папке «Результат N» |
+| `xlsx_done` | Saved | Сохранено |
+| `tool_footer` | 1–4 inspect · 5–8 analyse · 6–9 files · B back | 1–4 проверка · 5–8 анализ · 6–9 файлы · B назад |
 
 Rules: no new wording for existing actions; RU uses «Генетика», not
 «Инструменты генетика», because the screen is now a workspace.
@@ -190,11 +215,13 @@ Height below 20 is not supported; the existing `paint_lines` clips.
 | Web UI | Out of scope for a lab desktop tool |
 | Mouse support | Terminal-only product; keyboard is faster |
 | Cloud annotation in v1 | Privacy and offline-first conflict; needs caching design |
-| Plate maps via `wellmap`/`Plateo` | Both pull pandas/numpy, which the bundle excludes |
+| Full omics stack (scanpy, scvi) | Adds torch and a 3.12+ floor for no qPCR benefit |
 | Logo/brand work | This is an internal tool, not a brand exercise |
 
 ## Handoff
 
-V1 implements ideas 13 (`seqfold`) and 29 (`snapgene_reader`) from the catalog,
-plus local GenBank/FASTA import through the existing Biopython dependency. The
-implementation plan is `docs/superpowers/plans/2026-10-20-genetics-workspace.md`.
+V1 implements ideas 12 (`wellmap`), 13 (`seqfold`), 15 (`pydna`), 29
+(`snapgene_reader`) and 92 (`openpyxl` + pandas) from the catalog, plus local
+GenBank/FASTA import through the existing Biopython dependency. The
+implementation plan is
+`docs/superpowers/plans/2026-10-20-genetics-workspace.md`.
