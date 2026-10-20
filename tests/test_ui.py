@@ -104,6 +104,15 @@ def test_tools_screen_and_navigation(tmp_path):
     assert app.screen == 'home'
 
 
+def test_footer_keeps_shortcut_items_whole(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    lines = plain(app.render_home(100, 30)).splitlines()
+
+    assert not any(line.rstrip().endswith('·') for line in lines)
+    assert any('Q quit' in line for line in lines)
+
+
 def test_tools_hub_lists_all_groups(tmp_path):
     app = make_app(tmp_path, lang='en')
 

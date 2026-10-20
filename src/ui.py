@@ -414,6 +414,44 @@ def wrap(text, width):
     ) or ['']
 
 
+def pack_footer(text, width):
+    """Wrap a shortcut footer without splitting or dangling an item.
+
+    Footers are ``A ... · B ... · C ...``. Pack whole items per line and keep
+    the separator between items, so a narrow terminal never shows ``Q`` on one
+    line and ``выход`` on the next.
+    """
+    if width <= 0:
+        return ['']
+
+    parts = [part.strip() for part in re.split(r'\s+·\s+', text) if part.strip()]
+    if not parts:
+        return ['']
+
+    lines = []
+    current = ''
+    for part in parts:
+        candidate = f'{current} · {part}' if current else part
+        if len(candidate) <= width:
+            current = candidate
+            continue
+
+        if current:
+            lines.append(current)
+            current = ''
+
+        if len(part) <= width:
+            current = part
+        else:
+            wrapped = wrap(part, width)
+            lines.extend(wrapped[:-1])
+            current = wrapped[-1]
+
+    if current:
+        lines.append(current)
+    return lines or ['']
+
+
 def box(title, body, width, theme):
     width = max(24, width)
     inner = width - 4
@@ -758,7 +796,7 @@ class App:
             message, role = self.notice
             for line in wrap(message, width - 4):
                 lines.append(self.theme.paint('● ' + line, role, bold=True))
-        for line in wrap(text, width - 4):
+        for line in pack_footer(text, width - 4):
             lines.append(self.theme.paint(line, 'dim'))
         return lines
 
