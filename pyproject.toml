@@ -1,12 +1,10 @@
 [project]
 name = "avatar-combiner"
-version = "0.1.0"
+version = "0.2.0"
 description = "Объединение четырёх 96-луночных планшетов в один 384-луночный планшет"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = [
-    "openpyxl>=3.0.0",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [

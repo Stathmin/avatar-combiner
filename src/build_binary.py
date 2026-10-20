@@ -7,6 +7,7 @@
 import importlib.util
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -28,12 +29,8 @@ def check_pyinstaller():
 
 
 def check_dependencies():
-    """Проверяет наличие необходимых зависимостей."""
-    if importlib.util.find_spec('openpyxl') is None:
-        print("openpyxl не найден. Запустите: uv sync", file=sys.stderr)
-        return False
-
-    print("✓ openpyxl установлен")
+    """Проверяет runtime-зависимости."""
+    print("✓ Runtime dependencies: Python standard library only")
     return True
 
 
@@ -65,22 +62,51 @@ def build_binary():
         '--name', exe_name,
         '--clean',  # Очистить кэш перед сборкой
         '--noconfirm',  # Не спрашивать подтверждения
-        '--hidden-import', 'openpyxl',  # Явно указать openpyxl
-        '--hidden-import', 'openpyxl.cell._writer',  # Необходимые подмодули
-        '--hidden-import', 'openpyxl.workbook',
-        '--hidden-import', 'openpyxl.worksheet',
-        '--collect-all', 'openpyxl',  # Собрать все данные openpyxl
-        # Включаем необходимые модули как скрытые импорты
+        '--optimize', '2',  # Убрать docstring и assert из байткода
+        '--log-level', 'WARN',
+        # Модули, которые подключаются лениво
         '--hidden-import', 'extract_plates_from_excel',
         '--hidden-import', 'combine_plates',
+        '--hidden-import', 'ui',
         # Исключаем ненужные модули для уменьшения размера
         '--exclude-module', 'matplotlib',
         '--exclude-module', 'numpy',
         '--exclude-module', 'pandas',
         '--exclude-module', 'PIL',
         '--exclude-module', 'tkinter',
+        '--exclude-module', 'pytest',
+        '--exclude-module', 'ruff',
+        '--exclude-module', 'pip',
+        '--exclude-module', 'setuptools',
+        '--exclude-module', 'pkg_resources',
+        '--exclude-module', 'unittest',
+        '--exclude-module', 'asyncio',
+        '--exclude-module', 'concurrent',
+        '--exclude-module', 'multiprocessing',
+        '--exclude-module', 'email',
+        '--exclude-module', 'http',
+        '--exclude-module', 'urllib',
+        '--exclude-module', 'ssl',
+        '--exclude-module', 'socket',
+        '--exclude-module', 'xmlrpc',
+        '--exclude-module', 'pydoc',
+        '--exclude-module', 'pdb',
+        '--exclude-module', 'doctest',
+        '--exclude-module', 'wsgiref',
+        '--exclude-module', 'webbrowser',
+        '--exclude-module', 'xml.dom',
         script_name
     ]
+
+    upx = shutil.which('upx')
+    if upx:
+        print(f"✓ UPX: {upx}")
+        cmd.extend(['--upx-dir', str(Path(upx).resolve().parent)])
+    else:
+        print("UPX не найден; сборка без дополнительного сжатия")
+
+    if system != 'Windows':
+        cmd.insert(-1, '--strip')
     
     # Добавляем иконку для Windows, если указана
     if icon and os.path.exists(icon):

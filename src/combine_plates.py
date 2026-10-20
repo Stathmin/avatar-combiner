@@ -46,7 +46,7 @@ def convert_row_interleaved(old_row, plate_num, column):
     return new_rows[new_index]
 
 
-def combine_plates(input_files, output_file):
+def combine_plates(input_files, output_file, log=print):
     """
     Объединяет 4 планшета в один 384-луночный с чередованием по строкам.
     
@@ -111,14 +111,14 @@ def combine_plates(input_files, output_file):
         writer.writeheader()
         writer.writerows(all_samples_sorted)
     
-    print(f"Объединено {len(input_files)} планшетов")
-    print(f"Всего образцов: {len(all_samples)}")
-    print(f"Результат записан в '{output_file}'")
+    log(f"Объединено {len(input_files)} планшетов")
+    log(f"Всего образцов: {len(all_samples)}")
+    log(f"Результат записан в '{output_file}'")
     
     return all_samples
 
 
-def create_pivot_table(input_file, output_file):
+def create_pivot_table(input_file, output_file, log=print):
     """
     Создаёт пивот-таблицу из объединённого файла.
     
@@ -169,10 +169,10 @@ def create_pivot_table(input_file, output_file):
                 row_data[str(col)] = pivot_data[row][col]
             writer.writerow(row_data)
     
-    print(f"Пивот-таблица создана: '{output_file}'")
+    log(f"Пивот-таблица создана: '{output_file}'")
 
 
-def create_id_list(input_file, output_file):
+def create_id_list(input_file, output_file, log=print):
     """
     Создаёт список ID образцов из отсортированного combined_384_plate.csv.
     
@@ -198,10 +198,10 @@ def create_id_list(input_file, output_file):
         for sample_id in ids:
             f.write(sample_id + '\n')
     
-    print(f"Список ID создан: '{output_file}' ({len(ids)} образцов)")
+    log(f"Список ID создан: '{output_file}' ({len(ids)} образцов)")
 
 
-def main(output_dir=None, input_dir=None):
+def main(output_dir=None, input_dir=None, log=print):
     """Основная функция."""
     output_dir = Path(output_dir) if output_dir else Path('.')
     input_dir = Path(input_dir) if input_dir else output_dir
@@ -218,15 +218,15 @@ def main(output_dir=None, input_dir=None):
         print("Сначала запустите generate_test_plates.py для создания тестовых данных.", file=sys.stderr)
         sys.exit(1)
     
-    combine_plates(input_files, output_file)
+    combine_plates(input_files, output_file, log=log)
     
     # Создаём пивот-таблицу
     pivot_output = output_dir / 'combined_384_plate_pivot.csv'
-    create_pivot_table(output_file, pivot_output)
+    create_pivot_table(output_file, pivot_output, log=log)
     
     # Создаём список ID
     id_list_output = output_dir / 'combined_384_plate_ids.txt'
-    create_id_list(output_file, id_list_output)
+    create_id_list(output_file, id_list_output, log=log)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@
 Автоматически определяет, нужно ли извлекать данные из Excel, и запускает соответствующие скрипты.
 """
 
+import argparse
 import json
 import re
 import sys
@@ -19,6 +20,7 @@ except ImportError as e:
     sys.exit(1)
 
 
+__version__ = '0.2.0'
 RESULT_DIR_PATTERN = re.compile(r'^Результат(?:\s+(\d+))?$')
 
 
@@ -29,11 +31,13 @@ def application_dir():
     return Path(__file__).resolve().parent
 
 
-def create_result_dir(base_dir):
-    """Создаёт следующую папку «Результат N» и возвращает её путь."""
+def next_result_number(base_dir):
+    """Возвращает номер следующей папки результатов."""
     base_dir = Path(base_dir)
-    used_numbers = []
+    if not base_dir.exists():
+        return 1
 
+    used_numbers = []
     for entry in base_dir.iterdir():
         if not entry.is_dir():
             continue
@@ -41,10 +45,20 @@ def create_result_dir(base_dir):
         if match:
             used_numbers.append(int(match.group(1) or 1))
 
-    next_number = max(used_numbers, default=0) + 1
-    result_dir = base_dir / f'Результат {next_number}'
-    result_dir.mkdir()
-    return result_dir
+    return max(used_numbers, default=0) + 1
+
+
+def create_result_dir(base_dir):
+    """Создаёт следующую папку «Результат N» и возвращает её путь."""
+    base_dir = Path(base_dir)
+
+    while True:
+        result_dir = base_dir / f'Результат {next_result_number(base_dir)}'
+        try:
+            result_dir.mkdir()
+        except FileExistsError:
+            continue
+        return result_dir
 
 
 def read_config(config_path='config.json'):
@@ -60,14 +74,14 @@ def read_config(config_path='config.json'):
         sys.exit(1)
 
 
-def run(base_dir=None):
+def run(base_dir=None, log=print):
     """Выполняет пайплайн и пишет все результаты в новую папку «Результат N»."""
     base_dir = Path(base_dir) if base_dir else application_dir()
     config_path = base_dir / 'config.json'
 
-    print("="*60)
-    print("Мастер-скрипт обработки планшетов")
-    print("="*60)
+    log("=" * 60)
+    log("Мастер-скрипт обработки планшетов")
+    log("=" * 60)
 
     # Читаем конфигурацию
     config = read_config(config_path)
@@ -81,15 +95,15 @@ def run(base_dir=None):
 
     # Создаём папку результатов при каждом запуске
     result_dir = create_result_dir(base_dir)
-    print(f"\nПапка результатов: {result_dir.name}")
+    log(f"\nПапка результатов: {result_dir.name}")
 
     extracted = False
 
     # Проверяем наличие Excel файла
     if excel_path and excel_path.exists():
-        print(f"\nНайден Excel файл: {excel_path.name}")
-        print("Запускаем извлечение данных из Excel...")
-        print(f"{'='*60}\n")
+        log(f"\nНайден Excel файл: {excel_path.name}")
+        log("Запускаем извлечение данных из Excel...")
+        log(f"{'=' * 60}\n")
 
         try:
             # Запускаем извлечение данных из Excel напрямую
@@ -97,45 +111,85 @@ def run(base_dir=None):
                 config_path=config_path,
                 output_dir=result_dir,
                 base_dir=base_dir,
+                log=log,
             )
             extracted = True
-            print("\n✓ Извлечение данных из Excel выполнено успешно")
+            log("\n✓ Извлечение данных из Excel выполнено успешно")
         except Exception as e:
             print(f"\n✗ Ошибка при извлечении данных из Excel: {e}", file=sys.stderr)
             sys.exit(1)
     else:
         if excel_file:
-            print(f"\nExcel файл '{excel_file}' не найден в папке программы.")
+            log(f"\nExcel файл '{excel_file}' не найден в папке программы.")
         else:
-            print("\nExcel файл не указан в конфигурации.")
-        print("Пропускаем этап извлечения из Excel.")
-        print("Предполагается, что CSV файлы планшетов уже существуют.")
+            log("\nExcel файл не указан в конфигурации.")
+        log("Пропускаем этап извлечения из Excel.")
+        log("Предполагается, что CSV файлы планшетов уже существуют.")
 
     # Всегда запускаем объединение планшетов
-    print("\nЗапускаем объединение планшетов...")
-    print(f"{'='*60}\n")
+    log("\nЗапускаем объединение планшетов...")
+    log(f"{'=' * 60}\n")
 
     try:
         combine_plates.main(
             output_dir=result_dir,
             input_dir=result_dir if extracted else base_dir,
+            log=log,
         )
-        print("\n✓ Объединение планшетов выполнено успешно")
+        log("\n✓ Объединение планшетов выполнено успешно")
     except Exception as e:
         print(f"\n✗ Ошибка при объединении планшетов: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print("\n" + "="*60)
-    print("Пайплайн выполнен успешно!")
-    print(f"Результаты: {result_dir}")
-    print("="*60)
+    log("\n" + "=" * 60)
+    log("Пайплайн выполнен успешно!")
+    log(f"Результаты: {result_dir}")
+    log("=" * 60)
+    return result_dir
 
 
-def main():
-    """Основная функция."""
+def _is_interactive():
+    try:
+        return bool(sys.stdin and sys.stdin.isatty() and sys.stdout.isatty())
+    except (AttributeError, OSError):
+        return False
+
+
+def main(argv=None):
+    """Запускает интерфейс или обычный консольный пайплайн."""
+    parser = argparse.ArgumentParser(
+        prog='avatar_combiner',
+        description=(
+            'Объединение 4 планшетов 96-луночного формата в 384-луночный. '
+            'Combine four 96-well plates into one 384-well plate.'
+        ),
+        add_help=False,
+    )
+    parser.add_argument('--no-ui', action='store_true', help='run without the terminal UI')
+    parser.add_argument('--ui', action='store_true', help='force the terminal UI')
+    parser.add_argument('--lang', choices=('en', 'ru'), help='UI language: en or ru')
+    parser.add_argument('--version', action='store_true', help='show version and exit')
+    parser.add_argument('-h', '--help', action='help', help='show this help and exit')
+    args = parser.parse_args(argv)
+
+    if args.version:
+        print(f'avatar_combiner {__version__}')
+        return 0
+
+    interactive = _is_interactive()
+
+    if args.ui and not interactive:
+        print('Terminal UI needs an interactive terminal; using CLI mode.', file=sys.stderr)
+
+    if not args.no_ui and interactive:
+        from ui import App
+
+        App(lang=args.lang).run()
+        return 0
+
     run()
+    return 0
 
 
 if __name__ == '__main__':
-    main()
-
+    raise SystemExit(main())

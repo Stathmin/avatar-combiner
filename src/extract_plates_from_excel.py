@@ -9,7 +9,7 @@ import json
 import sys
 from pathlib import Path
 
-from openpyxl import load_workbook
+from xlsx_reader import load_workbook
 
 
 def read_config(config_path='config.json'):
@@ -107,17 +107,17 @@ def extract_plate_data(workbook, sheet_name, config):
     return plate_data, metadata_text
 
 
-def save_plate_csv(plate_data, output_file):
+def save_plate_csv(plate_data, output_file, log=print):
     """Сохраняет данные планшета в CSV файл."""
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=['id', 'row', 'column'])
         writer.writeheader()
         writer.writerows(plate_data)
-    
-    print(f"Создан файл {output_file}: {len(plate_data)} образцов")
+
+    log(f"Создан файл {output_file}: {len(plate_data)} образцов")
 
 
-def save_metadata_csv(metadata_dict, output_file='metadata.csv'):
+def save_metadata_csv(metadata_dict, output_file='metadata.csv', log=print):
     """Сохраняет метаданные всех планшетов в CSV файл."""
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=['plate', 'metadata'])
@@ -127,11 +127,11 @@ def save_metadata_csv(metadata_dict, output_file='metadata.csv'):
                 'plate': plate_name,
                 'metadata': metadata_dict[plate_name]
             })
-    
-    print(f"Создан файл метаданных: {output_file}")
+
+    log(f"Создан файл метаданных: {output_file}")
 
 
-def main(config_path='config.json', output_dir=None, base_dir=None):
+def main(config_path='config.json', output_dir=None, base_dir=None, log=print):
     """Основная функция."""
     config_path = Path(config_path)
     base_dir = Path(base_dir) if base_dir else config_path.parent
@@ -157,29 +157,32 @@ def main(config_path='config.json', output_dir=None, base_dir=None):
     
     # Обрабатываем каждый планшет
     metadata_dict = {}
-    
-    for plate_name, plate_config in config['sheets'].items():
-        sheet_name = plate_config['sheet_name']
-        output_file = output_dir / f"{plate_name}.csv"
-        
-        # Извлекаем данные
-        plate_data, metadata = extract_plate_data(workbook, sheet_name, config)
-        
-        # Используем метаданные из конфига, если они указаны, иначе из Excel
-        if 'metadata' in plate_config and plate_config['metadata']:
-            final_metadata = plate_config['metadata']
-        else:
-            final_metadata = metadata if metadata else f"Метаданные для {plate_name}"
-        
-        metadata_dict[plate_name] = final_metadata
-        
-        # Сохраняем CSV
-        save_plate_csv(plate_data, output_file)
-    
+
+    try:
+        for plate_name, plate_config in config['sheets'].items():
+            sheet_name = plate_config['sheet_name']
+            output_file = output_dir / f"{plate_name}.csv"
+
+            # Извлекаем данные
+            plate_data, metadata = extract_plate_data(workbook, sheet_name, config)
+
+            # Используем метаданные из конфига, если они указаны, иначе из Excel
+            if 'metadata' in plate_config and plate_config['metadata']:
+                final_metadata = plate_config['metadata']
+            else:
+                final_metadata = metadata if metadata else f"Метаданные для {plate_name}"
+
+            metadata_dict[plate_name] = final_metadata
+
+            # Сохраняем CSV
+            save_plate_csv(plate_data, output_file, log=log)
+    finally:
+        workbook.close()
+
     # Сохраняем метаданные
-    save_metadata_csv(metadata_dict, output_dir / 'metadata.csv')
-    
-    print(f"\nОбработано {len(config['sheets'])} планшетов")
+    save_metadata_csv(metadata_dict, output_dir / 'metadata.csv', log=log)
+
+    log(f"\nОбработано {len(config['sheets'])} планшетов")
 
 
 if __name__ == '__main__':
