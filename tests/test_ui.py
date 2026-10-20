@@ -197,6 +197,15 @@ def test_pcr_tool_allows_long_template(tmp_path, monkeypatch):
     assert calls[2]['max_length'] == 120
 
 
+def test_long_sequences_are_previewed(tmp_path):
+    app = make_app(tmp_path, lang='en')
+
+    lines = app.tool_preview_lines('SEQ', 'A' * 1000)
+
+    assert len(lines) <= 8
+    assert '+760 nt' in plain(lines)
+
+
 def test_sequence_lines_wrap_without_truncation(tmp_path):
     app = make_app(tmp_path, lang='en')
 

@@ -959,6 +959,14 @@ class App:
             lines.append(self.theme.paint(' ' * 13, 'dim') + chunk)
         return lines
 
+    def tool_preview_lines(self, label, sequence):
+        """Show the first 240 nt; the TUI has no scrolling in v1."""
+        lines = self.tool_sequence_lines(label, sequence[:240])
+        remaining = len(sequence) - 240
+        if remaining > 0:
+            lines.append(self.theme.paint(f'… +{remaining} nt', 'dim'))
+        return lines
+
     def set_tool_error(self, exc):
         self.tool_output = [self.theme.paint(f'✗ {exc}', 'error')]
 
@@ -1106,7 +1114,7 @@ class App:
             self.tool_line(self.t['import_features'], str(len(record.features))),
         ]
         self.tool_output.extend(
-            self.tool_sequence_lines(self.t['sequence'], record.sequence)
+            self.tool_preview_lines(self.t['sequence'], record.sequence)
         )
 
     def tool_layout(self):
@@ -1151,7 +1159,7 @@ class App:
             self.tool_line(self.t['pcr_product'], f'{report.length} nt'),
         ]
         self.tool_output.extend(
-            self.tool_sequence_lines(self.t['sequence'], report.sequence)
+            self.tool_preview_lines(self.t['sequence'], report.sequence)
         )
 
     def tool_xlsx(self):
