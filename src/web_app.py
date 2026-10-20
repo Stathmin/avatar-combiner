@@ -11,7 +11,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from nicegui import ui
+from nicegui import context, ui
 
 import app_config
 import pcr_tools
@@ -21,6 +21,18 @@ import run_pipeline
 import seq_import
 import seq_structure
 import tools as genetics
+
+TOOLS = (
+    ('tm', 'Primer Tm'),
+    ('pair', 'Primer pair'),
+    ('dna', 'DNA'),
+    ('units', 'Units'),
+    ('structure', 'Structure'),
+    ('pcr', 'PCR'),
+    ('import', 'Import sequence'),
+    ('layout', 'Plate layout'),
+    ('xlsx', 'XLSX export'),
+)
 
 
 class State:
@@ -65,6 +77,25 @@ class State:
 def build_app(base_dir):
     state = State(base_dir)
 
+    def shell(title, active):
+        with ui.left_drawer(value=True, bordered=True).classes('bg-grey-2') as drawer:
+            ui.label('AVATAR COMBINER').classes('text-sm font-bold mt-2')
+            ui.link('Pipeline', '/').classes('text-black no-underline')
+            ui.link('Results', '/results').classes('text-black no-underline')
+            ui.separator()
+            ui.label('GENETICS TOOLS').classes('text-xs opacity-60')
+            for key, label in TOOLS:
+                classes = 'text-black no-underline'
+                if active == key:
+                    classes += ' font-bold'
+                ui.link(label, f'/tools?tool={key}').classes(classes)
+
+        with ui.header().classes('items-center'):
+            ui.button(icon='menu', on_click=lambda: drawer.toggle()).props(
+                'flat color=white'
+            )
+            ui.label(title).classes('text-xl font-bold')
+
     def drain_logs(element):
         while state.logs:
             element.push(state.logs.pop(0))
@@ -94,11 +125,7 @@ def build_app(base_dir):
     @ui.page('/')
     def index():
         ui.page_title('Avatar Combiner')
-        with ui.header().classes('items-center justify-between'):
-            ui.label('Avatar Combiner').classes('text-xl font-bold')
-            with ui.row():
-                ui.link('Tools', '/tools')
-                ui.link('Results', '/results')
+        shell('Pipeline', 'pipeline')
 
         if state.error:
             ui.label(state.error).classes('text-red-600')
@@ -238,11 +265,7 @@ def build_app(base_dir):
     @ui.page('/results')
     def results_page():
         ui.page_title('Results')
-        with ui.header().classes('items-center justify-between'):
-            ui.label('Results').classes('text-xl font-bold')
-            with ui.row():
-                ui.link('Home', '/')
-                ui.link('Tools', '/tools')
+        shell('Results', 'results')
 
         folders = sorted(
             (
@@ -264,11 +287,8 @@ def build_app(base_dir):
     @ui.page('/tools')
     def tools_page():
         ui.page_title('Genetics tools')
-        with ui.header().classes('items-center justify-between'):
-            ui.label('Genetics tools').classes('text-xl font-bold')
-            with ui.row():
-                ui.link('Home', '/')
-                ui.link('Results', '/results')
+        tool_key = context.client.request.query_params.get('tool', 'tm')
+        shell('Genetics tools', tool_key)
 
         def show(container, text):
             container.clear()
@@ -290,7 +310,38 @@ def build_app(base_dir):
             pcr_tab = ui.tab('PCR')
             files_tab = ui.tab('Files')
 
-        with ui.tab_panels(tabs, value=tm_tab).classes('w-full'):
+        tab_map = {
+            'tm': tm_tab,
+            'pair': pair_tab,
+            'dna': dna_tab,
+            'units': units_tab,
+            'structure': structure_tab,
+            'pcr': pcr_tab,
+            'import': files_tab,
+            'layout': files_tab,
+            'xlsx': files_tab,
+        }
+
+        ui.label('All tools').classes('text-lg font-bold mt-2')
+        with ui.row().classes('flex-wrap gap-1'):
+            index = (
+                ('Primer Tm', tm_tab),
+                ('Primer pair', pair_tab),
+                ('DNA', dna_tab),
+                ('Units', units_tab),
+                ('Structure', structure_tab),
+                ('PCR', pcr_tab),
+                ('Import', files_tab),
+                ('Layout', files_tab),
+                ('XLSX', files_tab),
+            )
+            for label, tab in index:
+                ui.button(
+                    label,
+                    on_click=lambda tab=tab: tabs.set_value(tab),
+                ).props('flat dense')
+
+        with ui.tab_panels(tabs, value=tab_map.get(tool_key, tm_tab)).classes('w-full'):
             with ui.tab_panel(tm_tab):
                 sequence = ui.input('Sequence')
                 out = ui.column()
