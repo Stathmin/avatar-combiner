@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 .uploads/
 .nicegui/
+dev/artifacts/
 build/
 dist/
 *.spec

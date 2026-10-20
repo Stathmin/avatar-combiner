@@ -354,6 +354,7 @@ def build_app(base_dir):
                 label=tr('upload_xlsx'),
                 auto_upload=True,
                 max_file_size=50_000_000,
+                on_rejected=lambda: on_rejected(),
             ).props('accept=".xlsx,.xlsm"')
             workbook_info = ui.label('').classes('text-xs opacity-70').mark('workbook_info')
 
@@ -447,6 +448,8 @@ def build_app(base_dir):
                 ui.notify('select an .xlsx or .xlsm file', type='negative')
                 return
             target = state.uploads / name
+            if (state.base_dir / name).exists():
+                target = state.uploads / f'{Path(name).stem}-uploaded{Path(name).suffix}'
             target.write_bytes(await event.file.read())
             try:
                 config = app_config.build_config(
@@ -454,8 +457,9 @@ def build_app(base_dir):
                 )
                 app_config.validate_config(config, state.base_dir)
             except (app_config.ConfigError, OSError, ValueError) as exc:
-                ui.notify(f'File rejected: {exc}', type='negative')
+                ui.notify(f"{tr('file_rejected')}: {exc}", type='negative')
                 target.unlink(missing_ok=True)
+                upload.reset()
                 return
             state.config = config
             state.error = None
@@ -472,8 +476,13 @@ def build_app(base_dir):
                 f"{app_config.workbook_summary(target, state.config)}",
                 type='positive',
             )
+            upload.reset()
 
         upload.on_upload(on_upload)
+
+        def on_rejected():
+            upload.reset()
+            ui.notify(tr('upload_type_error'), type='negative')
 
         async def run_now():
             if state.running:
