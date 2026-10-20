@@ -13,8 +13,8 @@ and reorganises the existing four. Everything else stays out until it earns a
 slot.
 
 The project floor is Python 3.13. pandas, openpyxl, wellmap and pydna are
-allowed; the bundle is kept compact by excluding test and plotting modules,
-not by banning table libraries.
+allowed; the bundle is kept compact by excluding test modules, not by banning
+table libraries. matplotlib is bundled because wellmap imports it eagerly.
 
 ## Principles
 

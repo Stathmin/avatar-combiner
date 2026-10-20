@@ -30,7 +30,10 @@ def check_pyinstaller():
 
 def check_dependencies():
     """Проверяет runtime-зависимости."""
-    print("✓ Runtime: Bio.Seq, Pint, Primer3-py")
+    print(
+        '✓ Runtime: Bio.Seq/SeqIO, Pint, Primer3-py, seqfold, snapgene_reader, '
+        'pydna, wellmap, pandas, openpyxl'
+    )
     return True
 
 
@@ -78,69 +81,85 @@ def build_binary():
         '--hidden-import', 'Bio.Data.IUPACData',
         '--hidden-import', 'pint',
         '--collect-data', 'pint',
-        # Исключаем ненужные модули для уменьшения размера
-        '--exclude-module', 'matplotlib',
-        '--exclude-module', 'numpy',
-        '--exclude-module', 'pandas',
-        '--exclude-module', 'PIL',
+        # Генетический набор: локальные модули и их библиотеки
+        '--hidden-import', 'seq_structure',
+        '--hidden-import', 'seq_import',
+        '--hidden-import', 'plate_layout',
+        '--hidden-import', 'pcr_tools',
+        '--hidden-import', 'report_xlsx',
+        '--collect-all', 'seqfold',
+        '--hidden-import', 'snapgene_reader',
+        '--hidden-import', 'xmltodict',
+        '--hidden-import', 'html2text',
+        '--hidden-import', 'wellmap',
+        '--hidden-import', 'pydna',
+        '--hidden-import', 'openpyxl',
+        # pydna.amplify only needs this subset; collect-all pulls the gel module
+        # (matplotlib plotting) and other unused submodules.
+        '--hidden-import', 'pydna.amplify',
+        '--hidden-import', 'pydna.dseqrecord',
+        '--hidden-import', 'pydna.dseq',
+        '--hidden-import', 'pydna.seq',
+        '--hidden-import', 'pydna.seqrecord',
+        '--hidden-import', 'pydna.amplicon',
+        '--hidden-import', 'pydna.primer',
+        '--hidden-import', 'pydna.tm',
+        '--hidden-import', 'pydna.alphabet',
+        '--hidden-import', 'pydna.codon',
+        '--hidden-import', 'pydna.common_sub_strings',
+        '--hidden-import', 'pydna.crispr',
+        '--hidden-import', 'pydna.opencloning_models',
+        '--hidden-import', 'pydna.types',
+        '--hidden-import', 'pydna.utils',
+        '--hidden-import', 'seguid',
+        # Исключаем только заведомо необязательные модули, чтобы уменьшить размер.
+        # Библиотеки stdlib, которые могут понадобиться во время работы
+        # (unittest, concurrent, http, ssl, xml.dom), не исключаем.
+        '--exclude-module', 'pandas.tests',
+        '--exclude-module', 'matplotlib.tests',
+        '--exclude-module', 'matplotlib.testing',
+        '--exclude-module', 'pydna.gel',
+        '--exclude-module', 'matplotlib.backends.backend_pdf',
+        '--exclude-module', 'matplotlib.backends.backend_ps',
+        '--exclude-module', 'matplotlib.backends.backend_svg',
+        '--exclude-module', 'matplotlib.backends.backend_pgf',
+        '--exclude-module', 'matplotlib.backends.backend_template',
+        '--exclude-module', 'matplotlib.backends.backend_macosx',
+        '--exclude-module', 'matplotlib.backends.backend_qtagg',
+        '--exclude-module', 'matplotlib.backends.backend_qtcairo',
+        '--exclude-module', 'matplotlib.backends.backend_qt5agg',
+        '--exclude-module', 'matplotlib.backends.backend_qt5cairo',
+        '--exclude-module', 'matplotlib.backends.backend_gtk3agg',
+        '--exclude-module', 'matplotlib.backends.backend_gtk3cairo',
+        '--exclude-module', 'matplotlib.backends.backend_gtk4agg',
+        '--exclude-module', 'matplotlib.backends.backend_gtk4cairo',
+        '--exclude-module', 'matplotlib.backends.backend_tkagg',
+        '--exclude-module', 'matplotlib.backends.backend_tkcairo',
+        '--exclude-module', 'matplotlib.backends.backend_webagg',
+        '--exclude-module', 'matplotlib.backends.backend_webagg_core',
+        '--exclude-module', 'matplotlib.backends.backend_nbagg',
+        '--exclude-module', 'matplotlib.backends.backend_cairo',
         '--exclude-module', 'tkinter',
         '--exclude-module', 'pytest',
         '--exclude-module', 'ruff',
         '--exclude-module', 'pip',
         '--exclude-module', 'setuptools',
         '--exclude-module', 'pkg_resources',
-        '--exclude-module', 'unittest',
         '--exclude-module', 'asyncio',
-        '--exclude-module', 'concurrent',
         '--exclude-module', 'multiprocessing',
-        '--exclude-module', 'http',
-        '--exclude-module', 'urllib',
-        '--exclude-module', 'ssl',
-        '--exclude-module', 'socket',
         '--exclude-module', 'xmlrpc',
         '--exclude-module', 'pydoc',
         '--exclude-module', 'pdb',
         '--exclude-module', 'doctest',
         '--exclude-module', 'wsgiref',
         '--exclude-module', 'webbrowser',
-        '--exclude-module', 'xml.dom',
-        # Biopython: only Bio.Seq and IUPACData are used
-        '--exclude-module', 'Bio.Align',
-        '--exclude-module', 'Bio.AlignIO',
-        '--exclude-module', 'Bio.PDB',
-        '--exclude-module', 'Bio.Nexus',
-        '--exclude-module', 'Bio.GenBank',
-        '--exclude-module', 'Bio.bgzf',
-        '--exclude-module', 'Bio.File',
-        '--exclude-module', 'Bio.SeqIO',
-        '--exclude-module', 'Bio.SeqRecord',
-        '--exclude-module', 'Bio.SeqUtils',
-        '--exclude-module', 'Bio.Phylo',
-        '--exclude-module', 'Bio.Blast',
-        '--exclude-module', 'Bio.Entrez',
-        '--exclude-module', 'Bio.ExPASy',
-        '--exclude-module', 'Bio.KEGG',
-        '--exclude-module', 'Bio.Medline',
-        '--exclude-module', 'Bio.PopGen',
-        '--exclude-module', 'Bio.SCOP',
-        '--exclude-module', 'Bio.SwissProt',
-        '--exclude-module', 'Bio.TogoWS',
-        '--exclude-module', 'Bio.UniGene',
-        '--exclude-module', 'Bio.UniProt',
-        '--exclude-module', 'Bio.codonalign',
-        '--exclude-module', 'Bio.motifs',
-        '--exclude-module', 'Bio.pairwise2',
-        '--exclude-module', 'Bio.phenotype',
-        '--exclude-module', 'Bio.restriction',
-        '--exclude-module', 'Bio.SearchIO',
-        '--exclude-module', 'BioSQL',
         script_name
     ]
 
     upx = shutil.which('upx')
     if upx:
         print(f"✓ UPX: {upx}")
-        cmd.extend(['--upx-dir', str(Path(upx).resolve().parent)])
+        cmd[-1:-1] = ['--upx-dir', str(Path(upx).resolve().parent)]
     else:
         print("UPX не найден; сборка без дополнительного сжатия")
 
@@ -149,7 +168,7 @@ def build_binary():
     
     # Добавляем иконку для Windows, если указана
     if icon and os.path.exists(icon):
-        cmd.extend(['--icon', icon])
+        cmd[-1:-1] = ['--icon', icon]
     
     try:
         print("Запуск PyInstaller...")

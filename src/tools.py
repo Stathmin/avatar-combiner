@@ -6,8 +6,10 @@ Domain logic comes from established libraries:
 - Complement / reverse complement / IUPAC handling: Biopython ``Bio.Seq``.
 - Unit conversion: Pint with two small genetics unit definitions.
 
-Only the lightweight ``Bio.Seq`` path is imported; NumPy is not imported and is
-excluded from the PyInstaller bundle.
+The PyInstaller bundle keeps Biopython intact, because ``pydna`` needs
+``Bio.SeqIO``, ``Bio.SeqRecord`` and ``Bio.Restriction``, and includes
+``seqfold``, ``pydna``, ``wellmap``, ``pandas``, ``openpyxl`` and ``matplotlib``
+(imported eagerly by ``wellmap``). Only tests and optional modules are excluded.
 """
 
 from __future__ import annotations

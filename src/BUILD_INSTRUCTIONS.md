@@ -14,6 +14,10 @@ uv run python build_binary.py
 
 ## Ручная сборка
 
+Авторитетный список флагов — `src/build_binary.py`. Пример ниже минимальный:
+он не включает инструменты 5–9 (структура, импорт, раскладка, ПЦР, XLSX) и их
+зависимости, поэтому для реальной сборки используйте скрипт.
+
 ```bash
 uv sync --group build
 cd src
@@ -37,11 +41,13 @@ uv run pyinstaller --onefile --optimize 2 \
 
 Для Linux используйте имя без `.exe`, например `avatar_combiner`.
 
-`build_binary.py` дополнительно исключает `numpy`, `pandas`, `matplotlib`, `PIL`,
-`tkinter`, `setuptools` и тестовые пакеты. Библиотеки инструментов: `Bio.Seq`,
-`Pint` и `Primer3-py`. `NumPy` намеренно не включается в сборку.
+`build_binary.py` исключает тесты `pandas`, `tkinter`, `setuptools` и часть
+необязательных модулей. `matplotlib` входит в сборку, потому что его
+импортирует `wellmap`. Библиотеки инструментов: `Bio.Seq`/`SeqIO`, `Pint`,
+`Primer3-py`, `seqfold`, `snapgene_reader`, `pydna`, `wellmap`, `pandas` и
+`openpyxl`.
 
-Если в системе есть `upx`, скрипт автоматически включает сжатие. UPX может вызывать
+PyInstaller применяет UPX только на Windows; на Linux он отключён из-за проблем совместимости. UPX может вызывать
 ложные срабатывания антивируса, поэтому это опция, а не требование.
 
 ## Использование
