@@ -33,6 +33,7 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 main_file = ""
+addopts = "-p nicegui.testing.user_plugin"
 markers = ["nicegui_main_file: main file for NiceGUI user-simulation tests"]
 
 [tool.ruff]

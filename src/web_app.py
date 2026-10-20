@@ -344,7 +344,7 @@ def build_app(base_dir):
         selected = {'path': current}
 
         with ui.card().classes('w-full panel'):
-            ui.label(tr('workbook')).classes('text-lg font-bold')
+            ui.label(tr('source')).classes('text-lg font-bold')
             workbook_select = ui.select(
                 options,
                 value=current,

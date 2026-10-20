@@ -8,8 +8,6 @@ import pytest
 from nicegui.testing import User
 from openpyxl import Workbook
 
-pytest_plugins = ['nicegui.testing.user_plugin']
-
 WORKBOOK = Path(__file__).resolve().parents[1] / 'src' / 'планшеты соя пробелы.xlsx'
 
 BASE = Path(tempfile.mkdtemp(prefix='avatar-web-'))
