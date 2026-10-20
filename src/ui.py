@@ -281,19 +281,19 @@ HELP = {
         ('Run', 'Press R or Enter. A new «Результат N» folder is created and every output is written there.'),
         ('Outputs', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv and combined_384_plate_ids.txt.'),
         ('Config', 'config.json sets the Excel file and the four sheet names. Keep it next to the exe.'),
-        ('Tools', 'Press T. Primer Tm and primer-pair checks come from Primer3. DNA complement and unit conversion are included.'),
+        ('Tools', 'Press T. Inspect primers and DNA, analyse oligo structure and in-silico PCR, validate wellmap layouts, import GenBank, SnapGene and FASTA files, and export results to XLSX.'),
         ('Quick keys', 'R run · T tools · D results · O open last · C config · H help · L language · Q quit. Arrow keys move, Enter confirms.'),
         ('CFX', 'Paste combined_384_plate_ids.txt into Bio-Rad CFX Manager 3.1.'),
-        ('Size', 'Small runtime: Bio.Seq for DNA, Pint for units, Primer3-py for thermodynamics. No pandas, NumPy, openpyxl, Rich or Textual in the bundle.'),
+        ('Size', 'Runtime: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas and openpyxl. Only pandas tests are excluded from the bundle.'),
     ],
     'ru': [
         ('Запуск', 'Нажмите R или Enter. Будет создана папка «Результат N», в неё попадут все файлы.'),
         ('Результаты', 'plate1-4.csv, metadata.csv, combined_384_plate.csv, combined_384_plate_pivot.csv и combined_384_plate_ids.txt.'),
         ('Настройка', 'config.json задаёт Excel-файл и имена четырёх листов. Держите его рядом с exe.'),
-        ('Инструменты', 'Нажмите T. Tm и проверка пары праймеров — Primer3. Плюс комплемент ДНК и конвертер единиц.'),
+        ('Инструменты', 'Нажмите T. Проверка праймеров и ДНК, структура олиго и ПЦР in silico, проверка раскладки wellmap, импорт GenBank, SnapGene и FASTA, экспорт результатов в XLSX.'),
         ('Быстрые клавиши', 'R запуск · T инструменты · D результаты · O открыть последний · C настройки · H помощь · L язык · Q выход. Стрелки — выбор, Enter — подтвердить.'),
         ('CFX', 'Вставьте combined_384_plate_ids.txt в Bio-Rad CFX Manager 3.1.'),
-        ('Размер', 'Малый рантайм: Bio.Seq для ДНК, Pint для единиц, Primer3-py для термодинамики. Без pandas, NumPy, openpyxl, Rich и Textual в сборке.'),
+        ('Размер', 'Рантайм: Bio.Seq, Pint, Primer3-py, seqfold, pydna, wellmap, pandas и openpyxl. В сборке исключены только тесты pandas.'),
     ],
 }
 
