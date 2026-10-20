@@ -65,7 +65,7 @@ def build_binary():
         '--name', exe_name,
         '--clean',  # Очистить кэш перед сборкой
         '--noconfirm',  # Не спрашивать подтверждения
-        '--optimize', '2',  # Убрать docstring и assert из байткода
+        '--optimize', '1',  # Keep docstrings: pydna.alphabet builds tables from __doc__.
         '--log-level', 'WARN',
         # Модули, которые подключаются лениво
         '--hidden-import', 'extract_plates_from_excel',
@@ -91,7 +91,9 @@ def build_binary():
         '--hidden-import', 'snapgene_reader',
         '--hidden-import', 'xmltodict',
         '--hidden-import', 'html2text',
-        '--hidden-import', 'wellmap',
+        # plate_layout imports wellmap.file directly and stubs wellmap.plot,
+        # so matplotlib is never loaded at runtime.
+        '--hidden-import', 'wellmap.file',
         '--hidden-import', 'pydna',
         '--hidden-import', 'openpyxl',
         # pydna.amplify only needs this subset; collect-all pulls the gel module
@@ -112,33 +114,23 @@ def build_binary():
         '--hidden-import', 'pydna.types',
         '--hidden-import', 'pydna.utils',
         '--hidden-import', 'seguid',
+        # seguid resolves its own version through importlib.metadata.
+        '--copy-metadata', 'seguid',
+        '--copy-metadata', 'pydna',
         # Исключаем только заведомо необязательные модули, чтобы уменьшить размер.
         # Библиотеки stdlib, которые могут понадобиться во время работы
         # (unittest, concurrent, http, ssl, xml.dom), не исключаем.
         '--exclude-module', 'pandas.tests',
-        '--exclude-module', 'matplotlib.tests',
-        '--exclude-module', 'matplotlib.testing',
         '--exclude-module', 'pydna.gel',
-        '--exclude-module', 'matplotlib.backends.backend_pdf',
-        '--exclude-module', 'matplotlib.backends.backend_ps',
-        '--exclude-module', 'matplotlib.backends.backend_svg',
-        '--exclude-module', 'matplotlib.backends.backend_pgf',
-        '--exclude-module', 'matplotlib.backends.backend_template',
-        '--exclude-module', 'matplotlib.backends.backend_macosx',
-        '--exclude-module', 'matplotlib.backends.backend_qtagg',
-        '--exclude-module', 'matplotlib.backends.backend_qtcairo',
-        '--exclude-module', 'matplotlib.backends.backend_qt5agg',
-        '--exclude-module', 'matplotlib.backends.backend_qt5cairo',
-        '--exclude-module', 'matplotlib.backends.backend_gtk3agg',
-        '--exclude-module', 'matplotlib.backends.backend_gtk3cairo',
-        '--exclude-module', 'matplotlib.backends.backend_gtk4agg',
-        '--exclude-module', 'matplotlib.backends.backend_gtk4cairo',
-        '--exclude-module', 'matplotlib.backends.backend_tkagg',
-        '--exclude-module', 'matplotlib.backends.backend_tkcairo',
-        '--exclude-module', 'matplotlib.backends.backend_webagg',
-        '--exclude-module', 'matplotlib.backends.backend_webagg_core',
-        '--exclude-module', 'matplotlib.backends.backend_nbagg',
-        '--exclude-module', 'matplotlib.backends.backend_cairo',
+        # matplotlib enters only through wellmap.plot, which plate_layout stubs.
+        # PIL is used only by matplotlib, so both leave the bundle (~25 MB).
+        '--exclude-module', 'matplotlib',
+        '--exclude-module', 'PIL',
+        '--exclude-module', 'wellmap.plot',
+        # Not used by the offline tools; tested by the import-blocker test.
+        '--exclude-module', 'ssl',
+        '--exclude-module', '_ssl',
+        '--exclude-module', 'sqlite3',
         '--exclude-module', 'tkinter',
         '--exclude-module', 'pytest',
         '--exclude-module', 'ruff',

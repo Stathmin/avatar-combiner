@@ -48,3 +48,25 @@ def test_invalid_well_is_wrapped(tmp_path):
 def test_missing_file_is_rejected(tmp_path):
     with pytest.raises(tools.ToolError, match='file not found'):
         plate_layout.load_layout(tmp_path / 'missing.toml')
+
+
+def test_layout_loads_without_matplotlib(tmp_path):
+    import subprocess
+    import sys
+
+    path = tmp_path / 'plate.toml'
+    write_toml(path, '[well.A1]\nsample = "soy1"\n')
+    code = (
+        "import sys; sys.path.insert(0, 'src'); "
+        "sys.modules['matplotlib'] = None; sys.modules['PIL'] = None; "
+        f"import plate_layout; print(plate_layout.load_layout({str(path)!r}).wells)"
+    )
+
+    output = subprocess.run(
+        [sys.executable, '-c', code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert output.stdout.strip() == '1'

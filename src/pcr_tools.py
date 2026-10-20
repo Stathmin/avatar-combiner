@@ -29,7 +29,7 @@ def simulate_pcr(template, forward, reverse, circular=False):
         from pydna.amplify import pcr
         from pydna.dseqrecord import Dseqrecord
     except ImportError as exc:
-        raise ToolError('pydna is not available') from exc
+        raise ToolError(f'pydna is not available: {exc}') from exc
 
     if not isinstance(circular, bool):
         raise ToolError('circular must be True or False')

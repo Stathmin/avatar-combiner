@@ -21,7 +21,7 @@ uv run python build_binary.py
 ```bash
 uv sync --group build
 cd src
-uv run pyinstaller --onefile --optimize 2 \
+uv run pyinstaller --onefile --optimize 1 \
   --name аватар_объединитель_4х_планшетов \
   --hidden-import ui \
   --hidden-import tools \
