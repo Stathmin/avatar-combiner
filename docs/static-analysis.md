@@ -296,7 +296,7 @@ DNA, units, structure), then import/layout/PCR/XLSX.
 
 ## 7. Verification
 
-- `uv run pytest -q` → **82 passed**
+- `uv run pytest -q` → **87 passed**
 - `uv run ruff check src tests` → **clean**
 - Frozen build: `src/dist/avatar_combiner`, 62 MB, Web pages 200
 - UI integration tests: `tests/test_web_ui.py` (NiceGUI user simulation,
@@ -309,12 +309,12 @@ this table is the current state.
 
 | ID | Status | What changed |
 |---|---|---|
-| F1 | **Open** | Tool/config presentation is still duplicated. Needs the shared `tool_service` + presenter layer from §6. |
+| F1 | **Fixed** | Tool presentation lives in `tool_reports.py` as `(label_key, value)` rows; both UIs only render. Config forms stay UI-specific but share `app_config` and `run_pipeline`; no duplicated formatting or field order. |
 | F2 | **Fixed** | Web config and language live in `app.storage.user` (per client); run logs are per page. `state.running` stays a single global pipeline lock by design. |
 | F3 | **Fixed** | `run_pipeline.run` validates the workbook, sheets and range before `create_result_dir`. A missing workbook raises `PipelineError` and creates no folder. Regression tests pin it. |
 | F4 | **Fixed** | `app_config.validate_config` checks workbook, four unique sheets, range bounds and label rows; both JSON and auto configs go through it. |
 | F5 | **Fixed** | Custom `xlsx_reader.py` (208 lines) deleted. Input and export both use openpyxl, imported lazily so TUI startup stays light. |
-| F6 | **Open** | `TEXT` and `TEXTS` are still separate dictionaries. Needs the shared i18n module from §6. |
+| F6 | **Fixed** | One `i18n.py` with 123 keys per language; the two dictionaries and the drifting labels are gone. Tool names and report labels are shared keys, and a test enforces EN/RU parity. |
 | F7 | **Fixed** | `update_sheets`, `config_source`, `sheets_hint`, `range_hint` and `ids` removed. The two standalone scripts remain as utilities; neither is imported or bundled. |
 | F8 | **Fixed** | Local hidden imports are generated from the AST import graph (`collect_local_modules`), with a test; `wellmap` is pinned to the exact version whose internals the loader uses; other majors remain bounded. |
 | F9 | **Fixed** | UI catches now name expected types (`ToolError`, `ConfigError`, `OSError`, `ValueError`, `ImportError`); pipeline boundaries add the exception class to the message. Remaining broad catches are deliberate: Windows ANSI setup, desktop opening, and storage access without a client context. |
@@ -324,16 +324,16 @@ this table is the current state.
 
 ### Verification after remediation
 
-- `uv run pytest -q` → **82 passed**
+- `uv run pytest -q` → **87 passed**
 - `uv run ruff check src tests` → clean
 - Frozen run with workbook → exit 0, 8 result files + `manifest.json`
 - Frozen run with workbook removed → exit 1, **no** result folder
 - Frozen web → `/`, `/tools?tool=units`, `/results` all 200
 - Bundle: 62 MB
 
-**Still open:** F1 (duplicated tool/config presentation) and F6 (duplicated
-i18n). Both are architectural and should land as separate PRs from §6; they do
-not affect current correctness.
+**Still open:** none. F1's remaining UI-specific layer is the config form
+layout (prompt vs web form), which intentionally differs while sharing
+`app_config` and `run_pipeline`.
 
 ## 10. Limitations
 
