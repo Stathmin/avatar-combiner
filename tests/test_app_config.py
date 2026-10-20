@@ -173,7 +173,7 @@ def test_workbook_summary_describes_content(tmp_path):
     summary = app_config.workbook_summary(tmp_path / 'plates.xlsx', config)
 
     assert 'sheets' in summary
-    assert 'пл1' in summary
+    assert '4 selected' in summary
     assert '×' in summary
 
 

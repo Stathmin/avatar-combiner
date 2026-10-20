@@ -272,7 +272,7 @@ def build_app(base_dir):
                 'nav-link' + (' nav-active' if active == 'results' else '')
             )
             ui.separator()
-            ui.label(tr('genetics_tools')).classes('text-xs opacity-60')
+            ui.label(tr('tools_section')).classes('text-xs opacity-60')
             for key, label_key in TOOLS:
                 classes = 'nav-link'
                 if active == key:
@@ -540,7 +540,7 @@ def build_app(base_dir):
             reverse=True,
         )
         if not folders:
-            ui.label(tr('no_results'))
+            ui.label(tr('no_results_web'))
             return
 
         for folder in folders:
@@ -584,25 +584,6 @@ def build_app(base_dir):
             'layout': files_tab,
             'xlsx': files_tab,
         }
-
-        ui.label(tr('all_tools')).classes('text-lg font-bold mt-2')
-        with ui.row().classes('flex-wrap tool-index'):
-            index = (
-                ('tool_tm', tm_tab),
-                ('tool_pair', pair_tab),
-                ('tool_dna', dna_tab),
-                ('tool_units', units_tab),
-                ('tool_structure', structure_tab),
-                ('tool_pcr', pcr_tab),
-                ('tool_import', files_tab),
-                ('tool_layout', files_tab),
-                ('tool_xlsx', files_tab),
-            )
-            for label_key, tab in index:
-                ui.button(
-                    tr(label_key),
-                    on_click=lambda tab=tab: tabs.set_value(tab),
-                ).props('flat dense')
 
         with ui.tab_panels(tabs, value=tab_map.get(tool_key, tm_tab)).classes('w-full'):
             with ui.tab_panel(tm_tab):

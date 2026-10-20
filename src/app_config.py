@@ -299,8 +299,11 @@ def workbook_summary(path, config):
         dims = []
         for name in selected:
             sheet = workbook[name]
-            dims.append(f'{name} {sheet.max_row}×{sheet.max_column}')
-        return f'{len(names)} sheets; ' + ', '.join(dims)
+            dims.append(f'{sheet.max_row}×{sheet.max_column}')
+        return (
+            f'{len(names)} sheets · {len(selected)} selected · '
+            + ' / '.join(sorted(set(dims)))
+        )
     finally:
         workbook.close()
 

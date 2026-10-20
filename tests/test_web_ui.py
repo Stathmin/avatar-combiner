@@ -57,7 +57,7 @@ async def test_switching_workbook_refreshes_sheets_and_status(user: User):
     status = next(iter(user.find(marker='selection_status').elements))
     assert status.text == '4 sheets selected'
     info = next(iter(user.find(marker='workbook_info').elements))
-    assert 'o1' in info.text
+    assert '4 selected' in info.text
 
     user.find('Run').click()
     await user.should_see('Done:', retries=50)
@@ -71,8 +71,8 @@ async def test_switching_workbook_refreshes_sheets_and_status(user: User):
 async def test_home_shows_workbook_summary(user: User):
     await user.open('/')
 
-    await user.should_see('sheets;')
-    await user.should_see('пл1')
+    await user.should_see('4 selected')
+    await user.should_see('10×13')
 
 
 async def test_sheet_selects_are_populated_from_workbook(user: User):
