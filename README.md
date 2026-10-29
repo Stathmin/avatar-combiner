@@ -135,8 +135,7 @@ PyInstaller применяет UPX только на Windows; на Linux он о
 
 ## Лицензии
 
-Исходный код распространяется под лицензией Creative Commons Attribution 4.0
-International (CC BY 4.0) — см. файл `LICENSE`.
+Исходный код распространяется под лицензией MIT — см. файл `LICENSE`.
 
 `Primer3-py` распространяется под GPL-2.0-or-later. Если вы распространяете
 собранный exe с ним, действуют обязательства GPL. `Biopython` и `Pint`
