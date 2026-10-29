@@ -361,3 +361,21 @@ def test_tools_hub_compact_when_height_is_short(tmp_path):
 
     assert len(lines) <= 24
     assert 'RESULT' in plain(lines)
+
+def test_terminal_geometry_uses_live_size(monkeypatch):
+    monkeypatch.setattr(ui.shutil, 'get_terminal_size', lambda fallback=(80, 24): (140, 40))
+    assert ui.terminal_geometry() == (140, 40)
+
+
+def test_terminal_geometry_floors_tiny_consoles(monkeypatch):
+    monkeypatch.setattr(ui.shutil, 'get_terminal_size', lambda fallback=(80, 24): (10, 3))
+    assert ui.terminal_geometry() == (24, 8)
+
+
+def test_home_fills_wide_terminal_without_118_cap(tmp_path):
+    write_config(tmp_path)
+    app = make_app(tmp_path)
+    lines = app.render_home(140, 40)
+    # Box top border spans width: '╭' + dashes + '╮' => visible width == 140
+    top = ui.ANSI_RE.sub('', lines[0])
+    assert len(top) == 140
