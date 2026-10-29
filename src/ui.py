@@ -18,6 +18,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import app_config
+import extract_plates_from_excel as extract_plates
 import pcr_tools
 import plate_layout
 import report_xlsx
@@ -27,6 +28,32 @@ import tool_reports
 import tools as genetics
 from i18n import TEXT
 from run_pipeline import __version__, application_dir, next_result_number
+
+
+def copy_text_to_clipboard(text):
+    """Best-effort clipboard write for the TUI (Windows ``clip``, else pbcopy/xclip)."""
+    data = text.replace('\n', '\r\n') if os.name == 'nt' else text
+    if os.name == 'nt':
+        completed = subprocess.run(
+            ['clip'],
+            input=data.encode('utf-16le'),
+            check=False,
+            capture_output=True,
+        )
+        return completed.returncode == 0
+    for command in (['pbcopy'], ['xclip', '-selection', 'clipboard']):
+        try:
+            completed = subprocess.run(
+                command,
+                input=data.encode('utf-8'),
+                check=False,
+                capture_output=True,
+            )
+        except FileNotFoundError:
+            continue
+        if completed.returncode == 0:
+            return True
+    return False
 
 RESULT_PATTERN = run_pipeline.RESULT_DIR_PATTERN
 
@@ -45,7 +72,14 @@ PRIMITIVE = {
     'amber400': (251, 191, 36),
     'red400': (248, 113, 113),
     'white': (255, 255, 255),
+    # Four nations plate accents (web --plate-1…4)
+    'earth': (79, 154, 40),
+    'water': (30, 111, 179),
+    'air': (22, 164, 135),
+    'fire': (171, 22, 16),
 }
+
+PLATE_NATION = ('earth', 'water', 'air', 'fire')
 
 # Semantic tokens
 SEMANTIC = {
@@ -61,6 +95,10 @@ SEMANTIC = {
     'warning': 'amber400',
     'error': 'red400',
     'white': 'white',
+    'earth': 'earth',
+    'water': 'water',
+    'air': 'air',
+    'fire': 'fire',
 }
 
 FALLBACK_256 = {
@@ -76,6 +114,10 @@ FALLBACK_256 = {
     'warning': 214,
     'error': 203,
     'white': 231,
+    'earth': 70,
+    'water': 33,
+    'air': 43,
+    'fire': 160,
 }
 
 RESET = '\x1b[0m'
@@ -545,10 +587,12 @@ class App:
                     + ' '
                     + truncate(excel_name, inner - 10)
                 )
-            sheets = ' · '.join(
-                item.get('sheet_name', '—')
-                for item in config.get('sheets', {}).values()
-            ) or '—'
+            parts = []
+            for index, item in enumerate(config.get('sheets', {}).values()):
+                nation = PLATE_NATION[index % 4]
+                name = item.get('sheet_name', '—')
+                parts.append(self.theme.paint(name, nation, bold=True))
+            sheets = ' · '.join(parts) or '—'
 
         last = self.result_entries[-1] if self.result_entries else None
         last_text = (
@@ -666,10 +710,12 @@ class App:
                 if excel_path and excel_path.exists()
                 else self.theme.paint('✗ ', 'error')
             ) + excel_name
-            sheets = ' · '.join(
-                item.get('sheet_name', '—')
-                for item in config.get('sheets', {}).values()
-            ) or '—'
+            parts = []
+            for index, item in enumerate(config.get('sheets', {}).values()):
+                nation = PLATE_NATION[index % 4]
+                name = item.get('sheet_name', '—')
+                parts.append(self.theme.paint(name, nation, bold=True))
+            sheets = ' · '.join(parts) or '—'
             body = [
                 self.label_value(self.t['folder'], self.base_dir, inner),
                 self.label_value(self.t['excel'], excel_value, inner),
@@ -707,6 +753,7 @@ class App:
                 ('6', self.t['tool_layout']),
                 ('7', self.t['tool_pcr']),
                 ('8', self.t['tool_xlsx']),
+                ('9', self.t['tool_gradient']),
                 ('B', self.t['back']),
             ]
             listing = ' · '.join(f'{key} {label}' for key, label in tools)
@@ -730,6 +777,10 @@ class App:
                         ('5', self.t['tool_structure'], 'accent2'),
                         ('7', self.t['tool_pcr'], 'accent2'),
                     ],
+                    inner,
+                ),
+                self.tool_menu_row(
+                    [('9', self.t['tool_gradient'], 'accent2')],
                     inner,
                 ),
                 '',
@@ -957,6 +1008,24 @@ class App:
             self.tool_preview_lines(self.t['sequence'], report.sequence)
         )
 
+    def tool_gradient(self):
+        self.tool_output = []
+        back = self.prompt_text(self.t['gradient_back'], self.t['gradient_hint'])
+        if back is None:
+            return
+        front = self.prompt_text(self.t['gradient_front'], self.t['gradient_hint'])
+        if front is None:
+            return
+        try:
+            report = genetics.block_gradient(back, front)
+        except (genetics.ToolError, OSError, ImportError) as exc:
+            self.set_tool_error(exc)
+            return
+        self.tool_output = [
+            self.tool_line(letter, value, upper=False)
+            for letter, value in tool_reports.gradient_rows(report)
+        ]
+
     def tool_xlsx(self):
         self.tool_output = []
         path = self.prompt_text(self.t['tool_xlsx'], self.t['xlsx_hint'])
@@ -1140,6 +1209,8 @@ class App:
             self.tool_pcr()
         elif key == '8':
             self.tool_xlsx()
+        elif key == '9':
+            self.tool_gradient()
 
     def handle_results_key(self, key):
         if key in ('b', 'B'):
@@ -1150,8 +1221,38 @@ class App:
             self.move_result(1)
         elif key in ('o', 'O', 'ENTER'):
             self.open_selected_result()
+        elif key in ('c', 'C'):
+            self.copy_result_columns()
         elif key in ('r', 'R'):
             self.do_run()
+
+    def copy_result_columns(self):
+        """Copy plate*_column.txt from the selected result (A1–H12 row-major)."""
+        if not self.result_entries:
+            self.notice = (self.t['no_results'], 'warning')
+            return
+        folder = Path(self.result_entries[self.result_index]['path'])
+        blocks = []
+        for key in app_config.PLATE_KEYS:
+            path = folder / f'{key}_column.txt'
+            if not path.is_file():
+                continue
+            values = path.read_text(encoding='utf-8').splitlines()
+            blocks.append((key, values))
+        if not blocks:
+            self.notice = (self.t['extract_empty'], 'warning')
+            return
+        text = extract_plates.format_observations(blocks, include_headers=True)
+        if copy_text_to_clipboard(text):
+            self.notice = (
+                f"{self.t['extract_copied']}: {folder.name} ({len(blocks)})",
+                'success',
+            )
+        else:
+            # Fallback: keep a paste-ready file next to the result.
+            fallback = folder / 'plates_column_clipboard.txt'
+            fallback.write_text(text + '\n', encoding='utf-8')
+            self.notice = (f"{self.t['clipboard_failed']}: {fallback.name}", 'warning')
 
     def do_run(self):
         if not self.config:

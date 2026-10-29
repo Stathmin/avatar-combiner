@@ -77,10 +77,12 @@ def build_config(base_dir, excel_file=None, sheets=None, data_range=None):
 
     if sheets is None:
         sheets = available[:4]
-    sheets = [str(name).strip() for name in sheets]
-    if len(sheets) != 4:
-        raise ConfigError('select exactly four sheets')
-    if len(set(sheets)) != 4:
+    sheets = [str(name).strip() for name in sheets if str(name).strip()]
+    if not sheets:
+        raise ConfigError('select at least one sheet')
+    if len(sheets) > 4:
+        raise ConfigError('select at most four sheets')
+    if len(set(sheets)) != len(sheets):
         raise ConfigError('sheet names must be unique')
 
     missing = [name for name in sheets if name not in available]
@@ -148,15 +150,22 @@ def validate_config(config, base_dir=None, check_sheets=True):
     if not isinstance(sheets, dict):
         raise ConfigError('sheets must be an object')
 
+    selected_keys = []
     names = []
     for key in PLATE_KEYS:
+        if key not in sheets:
+            continue
         item = sheets.get(key)
         if not isinstance(item, dict) or not item.get('sheet_name'):
             raise ConfigError(f'sheet is missing for {key}')
+        selected_keys.append(key)
         names.append(str(item['sheet_name']).strip())
-    if len(set(names)) != 4:
+    if not selected_keys:
+        raise ConfigError('select at least one sheet')
+    if selected_keys != list(PLATE_KEYS[: len(selected_keys)]):
+        raise ConfigError('plates must be assigned in order plate1…plate4')
+    if len(set(names)) != len(names):
         raise ConfigError('sheet names must be unique')
-
 
     data_range = config.get('data_range')
     if not isinstance(data_range, dict):
@@ -178,7 +187,7 @@ def validate_config(config, base_dir=None, check_sheets=True):
 
     normalized = dict(config)
     normalized['sheets'] = {
-        key: dict(sheets[key]) for key in PLATE_KEYS
+        key: dict(sheets[key]) for key in selected_keys
     }
     normalized['data_range'] = normalized_range
     defaults = {
@@ -257,7 +266,7 @@ def validate_config(config, base_dir=None, check_sheets=True):
                         normalized_range['start_col'], normalized_range['end_col'] + 1
                     )
                 ]
-                if not any(value not in (None, '') for value in data):
+                if not any(_cell_has_value(value) for value in data):
                     raise ConfigError(f'sheet {name}: data range is empty')
         finally:
             workbook.close()
@@ -293,9 +302,7 @@ def workbook_summary(path, config):
     workbook = load_workbook(path)
     try:
         names = workbook.sheetnames
-        selected = [
-            config['sheets'][key]['sheet_name'] for key in PLATE_KEYS
-        ]
+        selected = selected_sheet_names(config)
         dims = []
         for name in selected:
             sheet = workbook[name]
@@ -306,6 +313,33 @@ def workbook_summary(path, config):
         )
     finally:
         workbook.close()
+
+
+def selected_sheet_names(config):
+    """Return sheet names for plate1…plateN in layout order."""
+    sheets = config.get('sheets') or {}
+    return [
+        str(sheets[key]['sheet_name']).strip()
+        for key in PLATE_KEYS
+        if key in sheets and isinstance(sheets[key], dict) and sheets[key].get('sheet_name')
+    ]
+
+
+def selected_plate_keys(config):
+    """Return plate keys present in the config, in layout order."""
+    sheets = config.get('sheets') or {}
+    return [key for key in PLATE_KEYS if key in sheets]
+
+
+def _cell_has_value(value):
+    if value is None:
+        return False
+    if isinstance(value, float):
+        import math
+
+        if math.isnan(value):
+            return False
+    return str(value).strip() not in ('', 'nan', 'NaN', 'None')
 
 
 def _relative_name(path, base):
@@ -320,3 +354,42 @@ def _column_index(letters):
     for char in letters.upper():
         index = index * 26 + (ord(char) - ord('A') + 1)
     return index
+
+
+def localize_error(message, lang='en'):
+    """Map known English ConfigError text to EN/RU UI copy."""
+    from i18n import TEXT
+
+    table = TEXT.get(lang, TEXT['en'])
+    text = str(message)
+    exact = {
+        'select at least one sheet': 'err_need_sheet',
+        'select at most four sheets': 'err_too_many_sheets',
+        'sheet names must be unique': 'err_sheets_unique',
+        'plates must be assigned in order plate1…plate4': 'err_plates_order',
+        'select a workbook first': 'err_need_workbook',
+        'use a range like B3:M10': 'err_bad_range',
+        'range must run from the top-left to the bottom-right': 'err_bad_range_order',
+        'sheets must be an object': 'err_sheets_object',
+        'data_range is missing': 'err_range_missing',
+        'excel_file is missing': 'err_excel_missing',
+        'config must be an object': 'err_config_object',
+    }
+    if text in exact:
+        return table.get(exact[text], text)
+    prefixes = (
+        ('sheet not found:', 'err_sheet_not_found'),
+        ('Excel file not found:', 'err_excel_not_found'),
+        ('no Excel file', 'err_no_excel'),
+        ('cannot read', 'err_cannot_read'),
+        (': data range is empty', 'err_sheet_empty'),
+        (': no column labels', 'err_no_column_labels'),
+        (': no row labels', 'err_no_row_labels'),
+        (': range ends at row', 'err_range_rows'),
+        (': range ends at column', 'err_range_cols'),
+        ('sheet is missing for', 'err_sheet_missing_key'),
+    )
+    for needle, key in prefixes:
+        if needle in text:
+            return table.get(key, text)
+    return text

@@ -133,6 +133,75 @@ def thermo_text(result, label):
 
 
 # ---------------------------------------------------------------------------
+# PCR block gradient (CFX-style rows A–H)
+# ---------------------------------------------------------------------------
+
+GRADIENT_ROWS = 'ABCDEFGH'
+
+# Bio-Rad does not publish a closed-form T100/CFX row-temperature formula.
+# Approximation: fixed spatial weights shared across gradient spans.
+#   T_row = front + (back - front) * w_row
+# Weights are the mean of (T - front) / span from six T100 UI screenshots
+# (spans 8–12 °C). Not an official Bio-Rad model.
+# Residual after 0.1 °C display rounding: 65→55 row B is 64.2 vs UI 64.3.
+_GRADIENT_WEIGHTS = (
+    1.0,
+    0.925,
+    0.8,
+    0.6102777777777778,
+    0.3836111111111111,
+    0.1938888888888889,
+    0.07055555555555555,
+    0.0,
+)
+_GRADIENT_MAX_SPAN = 24.0  # CFX/T100 documented maximum gradient range (°C)
+
+
+@dataclass(frozen=True)
+class GradientReport:
+    back: float
+    front: float
+    rows: tuple  # ((letter, temp_c), ...) for A–H
+
+
+def _parse_celsius(value, label):
+    text = str(value).strip().replace(',', '.').replace('°', '').rstrip('Cc')
+    try:
+        return float(text)
+    except ValueError as exc:
+        raise ToolError(f'{label} must be a temperature in °C') from exc
+
+
+def block_gradient(back_celsius, front_celsius):
+    """Return per-row block temperatures for a T100/CFX-style 96-well gradient.
+
+    Back row is A (hottest); front row is H (coolest). Intermediate rows use
+    fixed relative weights fitted to Bio-Rad T100 UI screenshots — an
+    approximation, not a proprietary Bio-Rad formula.
+    """
+    back = _parse_celsius(back_celsius, 'back row')
+    front = _parse_celsius(front_celsius, 'front row')
+
+    if front > back:
+        raise ToolError(
+            'front row must be ≤ back row (CFX: A hottest, H coolest)'
+        )
+
+    span = back - front
+    if span > _GRADIENT_MAX_SPAN:
+        raise ToolError(
+            f'gradient span {span:.1f} °C exceeds CFX maximum '
+            f'{_GRADIENT_MAX_SPAN:.0f} °C'
+        )
+
+    rows = tuple(
+        (letter, round(front + span * weight, 1))
+        for letter, weight in zip(GRADIENT_ROWS, _GRADIENT_WEIGHTS)
+    )
+    return GradientReport(back=back, front=front, rows=rows)
+
+
+# ---------------------------------------------------------------------------
 # Unit conversion
 # ---------------------------------------------------------------------------
 

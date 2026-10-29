@@ -4,7 +4,8 @@ Run from the repo root:
 
     uv run python dev/web_e2e.py
 
-Uses the system Chromium through Playwright; no browser download required.
+Uses Playwright’s bundled Chromium by default (`uv run playwright install chromium`).
+Override with PLAYWRIGHT_CHROMIUM_EXECUTABLE if needed.
 """
 
 from __future__ import annotations
@@ -25,6 +26,15 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 8150
 URL = f'http://127.0.0.1:{PORT}/'
+
+
+def launch_chromium(playwright):
+    """Launch Chromium: Playwright default, or PLAYWRIGHT_CHROMIUM_EXECUTABLE."""
+    kwargs = {'headless': True, 'args': ['--no-sandbox']}
+    executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
+    if executable:
+        kwargs['executable_path'] = executable
+    return playwright.chromium.launch(**kwargs)
 
 
 def make_workbook(path, names):
@@ -81,11 +91,7 @@ def main():
     try:
         wait_for_server()
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                executable_path='/usr/bin/chromium',
-                headless=True,
-                args=['--no-sandbox'],
-            )
+            browser = launch_chromium(playwright)
             page = browser.new_page(viewport={'width': 1400, 'height': 1100})
             page.goto(URL)
             page.wait_for_selector('text=4 sheets selected', timeout=20000)

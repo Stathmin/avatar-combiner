@@ -5,9 +5,66 @@
 """
 
 import csv
+import math
 from pathlib import Path
 
 import app_config
+
+ROWS_96 = ('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+
+
+def cell_to_id(cell_value):
+    """Normalize an Excel cell to a sample id string; blanks/NaN → ''."""
+    if cell_value is None:
+        return ''
+    if isinstance(cell_value, float) and math.isnan(cell_value):
+        return ''
+    text = str(cell_value).strip()
+    if text in ('', 'nan', 'NaN', 'None'):
+        return ''
+    return text
+
+
+def empty_plate_data():
+    """96 empty wells in row-major A1–A12 … H1–H12 order."""
+    return [
+        {'id': '', 'row': row, 'column': column}
+        for row in ROWS_96
+        for column in range(1, 13)
+    ]
+
+
+def observations_column(plate_data):
+    """Return well values in A1–A12, B1–B12, … order (one string per well)."""
+    by_well = {}
+    for item in plate_data:
+        row = str(item.get('row', '')).strip().upper()
+        try:
+            column = int(item.get('column'))
+        except (TypeError, ValueError):
+            continue
+        by_well[(row, column)] = cell_to_id(item.get('id', ''))
+    return [
+        by_well.get((row, column), '')
+        for row in ROWS_96
+        for column in range(1, 13)
+    ]
+
+
+def format_observations(plates, include_headers=False):
+    """Format one or more plates as newline-separated values for clipboard/paste.
+
+    ``plates`` is an ordered mapping/list of ``(label, values)``.
+    Blank wells stay as empty lines. Multiple plates are separated by a blank
+    line; optional ``# label`` headers keep sections clear.
+    """
+    blocks = []
+    for label, values in plates:
+        lines = list(values)
+        if include_headers:
+            lines = [f'# {label}', *lines]
+        blocks.append('\n'.join(lines))
+    return '\n\n'.join(blocks)
 
 
 def extract_plate_data(workbook, sheet_name, config):
@@ -45,20 +102,19 @@ def extract_plate_data(workbook, sheet_name, config):
             metadata_cells.append(str(cell_value))
     metadata_text = ' '.join(metadata_cells).strip()
     
-    # Извлекаем данные из B3:M10
+    # Извлекаем данные из B3:M10 (пустые / NaN → '')
     plate_data = []
-    rows_96 = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-    
+
     row_idx = 0
     for excel_row in range(start_row, end_row + 1):
         # Получаем метку строки из колонки A
         row_label_cell = sheet.cell(row=excel_row, column=row_labels_col).value
-        if row_label_cell is not None:
+        if row_label_cell is not None and str(row_label_cell).strip():
             row_label = str(row_label_cell).strip().upper()
         else:
             # Если метка отсутствует, используем стандартную последовательность
-            row_label = rows_96[row_idx] if row_idx < len(rows_96) else chr(ord('A') + row_idx)
-        
+            row_label = ROWS_96[row_idx] if row_idx < len(ROWS_96) else chr(ord('A') + row_idx)
+
         # Извлекаем данные из столбцов B-M
         for excel_col in range(start_col, end_col + 1):
             # Получаем метку столбца из строки 2
@@ -70,24 +126,17 @@ def extract_plate_data(workbook, sheet_name, config):
                     col_label = excel_col - start_col + 1
             else:
                 col_label = excel_col - start_col + 1
-            
-            # Получаем значение ячейки (ID образца)
-            cell_value = sheet.cell(row=excel_row, column=excel_col).value
-            
-            # Всегда добавляем запись, даже для пустых ячеек
-            if cell_value is not None:
-                sample_id = str(cell_value).strip()
-            else:
-                sample_id = ''
-            
+
+            sample_id = cell_to_id(sheet.cell(row=excel_row, column=excel_col).value)
+
             plate_data.append({
                 'id': sample_id,
                 'row': row_label,
                 'column': col_label
             })
-        
+
         row_idx += 1
-    
+
     return plate_data, metadata_text
 
 
@@ -143,34 +192,47 @@ def main(config_path='config.json', output_dir=None, base_dir=None, log=print, c
             f"не удалось открыть '{excel_file}' ({type(exc).__name__}): {exc}"
         ) from exc
     
-    # Обрабатываем каждый планшет
+    # Selected plates from Excel; missing plate slots (2–4) get empty wells so
+    # the 384 layout keeps A–P × 1–24 positions stable.
     metadata_dict = {}
+    selected = set(app_config.selected_plate_keys(config))
 
     try:
-        for plate_name, plate_config in config['sheets'].items():
-            sheet_name = plate_config['sheet_name']
-            output_file = output_dir / f"{plate_name}.csv"
+        for plate_name in app_config.PLATE_KEYS:
+            output_file = output_dir / f'{plate_name}.csv'
+            column_file = output_dir / f'{plate_name}_column.txt'
 
-            # Извлекаем данные
-            plate_data, metadata = extract_plate_data(workbook, sheet_name, config)
-
-            # Используем метаданные из конфига, если они указаны, иначе из Excel
-            if 'metadata' in plate_config and plate_config['metadata']:
-                final_metadata = plate_config['metadata']
+            if plate_name in selected:
+                plate_config = config['sheets'][plate_name]
+                sheet_name = plate_config['sheet_name']
+                plate_data, metadata = extract_plate_data(
+                    workbook, sheet_name, config
+                )
+                if 'metadata' in plate_config and plate_config['metadata']:
+                    final_metadata = plate_config['metadata']
+                else:
+                    final_metadata = (
+                        metadata if metadata else f'Метаданные для {plate_name}'
+                    )
             else:
-                final_metadata = metadata if metadata else f"Метаданные для {plate_name}"
+                plate_data = empty_plate_data()
+                final_metadata = ''
+                log(f'{plate_name}: empty slot (no sheet selected)')
 
             metadata_dict[plate_name] = final_metadata
-
-            # Сохраняем CSV
             save_plate_csv(plate_data, output_file, log=log)
+            column_values = observations_column(plate_data)
+            column_file.write_text(
+                '\n'.join(column_values) + '\n', encoding='utf-8'
+            )
+            log(f'Создан столбец наблюдений: {column_file.name}')
     finally:
         workbook.close()
 
     # Сохраняем метаданные
     save_metadata_csv(metadata_dict, output_dir / 'metadata.csv', log=log)
 
-    log(f"\nОбработано {len(config['sheets'])} планшетов")
+    log(f"\nОбработано {len(selected)} планшетов (+ {4 - len(selected)} пустых слотов)")
 
 
 if __name__ == '__main__':

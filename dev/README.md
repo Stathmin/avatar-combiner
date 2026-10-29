@@ -2,6 +2,8 @@
 
 Browser-level checks for the local web UI.
 
+Browsers (once per machine / after Playwright upgrades): `uv run playwright install chromium`
+
 ## Fast interaction matrix
 
 ```bash

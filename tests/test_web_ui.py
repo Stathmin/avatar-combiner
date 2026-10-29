@@ -41,6 +41,26 @@ async def test_home_shows_workbook(user: User):
     await user.should_see('plates.xlsx')
 
 
+async def test_results_shows_output_legend(user: User):
+    await user.open('/results')
+
+    await user.should_see('What is in «Результат N»')
+    await user.should_see('manifest.json')
+    await user.should_see('plate1–4_column.txt')
+    await user.should_see('combined_384_plate_ids.txt')
+
+
+async def test_home_shows_first_run_card(user: User):
+    await user.open('/')
+
+    await user.should_see('Quick start')
+    await user.should_see('B3:M10')
+    await user.should_see('Результат N')
+    user.find(marker='first_run_dismiss').click()
+    await user.open('/')
+    await user.should_not_see('Quick start')
+
+
 async def test_switching_workbook_refreshes_sheets_and_status(user: User):
     await user.open('/')
     other = str(BASE / 'zz_other.xlsx')
@@ -57,7 +77,7 @@ async def test_switching_workbook_refreshes_sheets_and_status(user: User):
     info = next(iter(user.find(marker='workbook_info').elements))
     assert '4 selected' in info.text
 
-    user.find('Run').click()
+    user.find(marker='run_pipeline').click()
     await user.should_see('Done:', retries=50)
 
     created = set(BASE.glob('Результат *')) - before
@@ -166,6 +186,6 @@ async def test_run_from_web(user: User):
     await user.open('/')
     await user.should_see('Run')
 
-    user.find('Run').click()
+    user.find(marker='run_pipeline').click()
 
     await user.should_see('Done:', retries=50)
