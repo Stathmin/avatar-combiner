@@ -4,6 +4,7 @@ REM Stop the Avatar Combiner web UI started by start-web.bat
 setlocal EnableExtensions
 set "PIDFILE=%TEMP%\avatar-combiner-web.pid"
 set "PORTFILE=%TEMP%\avatar-combiner-web.port"
+set "APPDIR=%~dp0"
 set "STOPPED=0"
 
 echo Stopping Avatar Combiner web UI...
@@ -31,9 +32,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 
 if exist "%PORTFILE%" del "%PORTFILE%" >nul 2>&1
 
-REM Fallback: kill known Avatar web titles / python launchers bound to 8080-8099
+REM Fallback: kill python/uv/avatar listeners, or any listener whose exe lives under this folder.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "8080..8099 | ForEach-Object { Get-NetTCPConnection -LocalPort $_ -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if ($proc -and ($proc.ProcessName -match 'python|uv|аватар|avatar')) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$_) } } }" 2>nul
+  "$dir=$env:APPDIR; if (-not $dir) { $dir='%~dp0' }; 8080..8099 | ForEach-Object { $port=$_; Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if (-not $proc) { return }; $path=''; try { $path=$proc.Path } catch {}; if ($proc.ProcessName -match 'python|uv|avatar' -or ($path -and $dir -and $path.StartsWith($dir))) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$port) } } }" 2>nul
 
-echo Done. You can close any leftover console titled "Avatar Combiner — Web UI".
+echo Done. You can close any leftover console titled "Avatar Combiner - Web UI".
 pause

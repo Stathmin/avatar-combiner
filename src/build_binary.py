@@ -142,9 +142,10 @@ echo Done.
 pause
 endlocal
 '''
-    # Write as UTF-8 with BOM so editors keep ASCII body; cmd still sees ASCII opcodes.
-    (dist_dir / 'start-web.bat').write_text(start, encoding='utf-8-sig')
-    (dist_dir / 'stop-web.bat').write_text(stop, encoding='utf-8-sig')
+    # Pure ASCII, no BOM. UTF-16 bats make cmd run "R" from "REM" (launches R.exe);
+    # UTF-8 BOM can also confuse older cmd. Keep these files OEM-safe.
+    (dist_dir / 'start-web.bat').write_bytes(start.encode('ascii'))
+    (dist_dir / 'stop-web.bat').write_bytes(stop.encode('ascii'))
 
     # Ship icon + shortcut helpers beside the exe for lab desktops.
     icon_src = SCRIPT_DIR / 'assets' / 'app-icon.ico'
@@ -156,6 +157,28 @@ endlocal
             helper = SCRIPT_DIR / name
         if helper.is_file():
             shutil.copy2(helper, dist_dir / name)
+
+    # Build portable .lnk files (relative bat + same-folder icon) for the release folder.
+    helper_ps1 = dist_dir / 'create-shortcuts.ps1'
+    if helper_ps1.is_file() and (dist_dir / 'app-icon.ico').is_file():
+        try:
+            subprocess.run(
+                [
+                    'powershell',
+                    '-NoProfile',
+                    '-ExecutionPolicy',
+                    'Bypass',
+                    '-File',
+                    str(helper_ps1),
+                    '-TargetDir',
+                    str(dist_dir),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            pass
 
     # Also drop plate-fold GIF beside the exe (resolve_plate_fold_gif first look).
     gif_src = SCRIPT_DIR.parent / 'docs' / 'media' / 'four-to-384.gif'

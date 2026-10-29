@@ -5,7 +5,7 @@ REM Stop: close this window, press Ctrl+C, or double-click stop-web.bat
 
 setlocal EnableExtensions
 cd /d "%~dp0"
-title Avatar Combiner — Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
+title Avatar Combiner - Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
 
 set "EXE="
 for %%F in ("%~dp0src\dist\*.exe") do set "EXE=%%~fF"
@@ -14,7 +14,7 @@ set "PORT=8080"
 
 echo.
 echo  ============================================================
-echo   Avatar Combiner — web UI
+echo   Avatar Combiner - web UI
 echo  ============================================================
 echo   Stop: close this window, Ctrl+C, or stop-web.bat
 echo  ============================================================
