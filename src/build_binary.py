@@ -97,7 +97,6 @@ REM Finds the .exe beside this bat (avoids cmd code-page issues with Cyrillic na
 setlocal EnableExtensions
 cd /d "%~dp0"
 title Avatar Combiner - Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
-set "PORT=8080"
 set "EXE="
 for %%F in ("%~dp0*.exe") do set "EXE=%%~fF"
 if not defined EXE (
@@ -110,6 +109,9 @@ if not exist "%EXE%" (
   pause
   exit /b 1
 )
+set "PORT="
+for /f %%P in ('powershell -NoProfile -Command "for($p=8080;$p -lt 8100;$p++){try{$l=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$p);$l.Start();$l.Stop();Write-Output $p;break}catch{}}"') do set "PORT=%%P"
+if not defined PORT set "PORT=8080"
 echo %PORT%> "%TEMP%\\avatar-combiner-web.port"
 echo Starting web UI on port %PORT%
 echo Exe: %EXE%
@@ -142,10 +144,13 @@ echo Done.
 pause
 endlocal
 '''
-    # Pure ASCII, no BOM. UTF-16 bats make cmd run "R" from "REM" (launches R.exe);
-    # UTF-8 BOM can also confuse older cmd. Keep these files OEM-safe.
-    (dist_dir / 'start-web.bat').write_bytes(start.encode('ascii'))
-    (dist_dir / 'stop-web.bat').write_bytes(stop.encode('ascii'))
+    # Pure ASCII + CRLF, no BOM. UTF-16 bats make cmd run "R" from "REM"
+    # (launches R.exe); LF-only is fragile; BOM confuses older cmd.
+    def _bat_bytes(text: str) -> bytes:
+        return text.replace('\r\n', '\n').replace('\n', '\r\n').encode('ascii')
+
+    (dist_dir / 'start-web.bat').write_bytes(_bat_bytes(start))
+    (dist_dir / 'stop-web.bat').write_bytes(_bat_bytes(stop))
 
     # Ship icon + shortcut helpers beside the exe for lab desktops.
     icon_src = SCRIPT_DIR / 'assets' / 'app-icon.ico'
@@ -158,7 +163,8 @@ endlocal
         if helper.is_file():
             shutil.copy2(helper, dist_dir / name)
 
-    # Build portable .lnk files (relative bat + same-folder icon) for the release folder.
+    # Absolute-path .lnk files (required for icons + correct working dir on Windows).
+    # After unzip on another PC, user must run create-shortcuts.bat once.
     helper_ps1 = dist_dir / 'create-shortcuts.ps1'
     if helper_ps1.is_file() and (dist_dir / 'app-icon.ico').is_file():
         try:

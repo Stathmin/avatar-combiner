@@ -15,6 +15,7 @@ def test_dist_web_bats_are_ascii_and_glob_exe(tmp_path: Path):
     assert not start_bytes.startswith(b'\xff\xfe')  # UTF-16 LE
     assert not start_bytes.startswith(b'\xef\xbb\xbf')  # UTF-8 BOM
     assert start_bytes.startswith(b'@echo off')
+    assert b'\r\n' in start_bytes  # Windows CRLF
     start = start_bytes.decode('ascii')
     stop = stop_bytes.decode('ascii')
     assert start.isascii()
@@ -23,3 +24,4 @@ def test_dist_web_bats_are_ascii_and_glob_exe(tmp_path: Path):
     assert 'аватар' not in start
     assert 'аватар' not in stop
     assert '--web' in start
+    assert 'TcpListener' in start  # free-port probe
