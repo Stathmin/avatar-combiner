@@ -80,28 +80,51 @@ def _write_dist_web_bats(dist_dir: Path, exe_name: str) -> None:
     ``--web``. Bats keep start/stop obvious for non-dev Windows users.
     Also copies the app icon and shortcut helpers so lab users can pin .lnk
     files with the four-nations mark (``.bat`` files cannot embed icons).
+
+    Important: keep bat bodies ASCII-only. ``cmd.exe`` reads ``.bat`` files in
+    the OEM/ANSI code page, so a UTF-8 Cyrillic exe name embedded in the bat
+    becomes mojibake and fails with "is not recognized as an internal or
+    external command" even though double-clicking the ``.exe`` works. Resolve
+    the exe via ``*.exe`` glob instead (``exe_name`` is kept for callers /
+    logging only).
     """
+    del exe_name  # name is Cyrillic; do not embed it in the .bat text
     dist_dir.mkdir(parents=True, exist_ok=True)
-    start = f'''@echo off
+    # ASCII-only templates — do not put non-ASCII in these strings.
+    start = '''@echo off
 REM Start the packaged Avatar Combiner web UI in the default browser.
-setlocal
+REM Finds the .exe beside this bat (avoids cmd code-page issues with Cyrillic names).
+setlocal EnableExtensions
 cd /d "%~dp0"
-title Avatar Combiner — Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
+title Avatar Combiner - Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
 set "PORT=8080"
-set "EXE=%~dp0{exe_name}"
+set "EXE="
+for %%F in ("%~dp0*.exe") do set "EXE=%%~fF"
+if not defined EXE (
+  echo [error] No .exe found in "%~dp0"
+  pause
+  exit /b 1
+)
+if not exist "%EXE%" (
+  echo [error] Missing exe: %EXE%
+  pause
+  exit /b 1
+)
 echo %PORT%> "%TEMP%\\avatar-combiner-web.port"
-echo Starting "%EXE%" --web --port %PORT%
+echo Starting web UI on port %PORT%
+echo Exe: %EXE%
 echo Open http://127.0.0.1:%PORT%  (browser should open shortly)
 echo Stop: close this window, Ctrl+C, or run stop-web.bat
 start "" /b powershell -NoProfile -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:%PORT%'"
 "%EXE%" --web --port %PORT% --no-browser
 endlocal
 '''
-    # Match repo-root stop-web.bat: PID file, recorded port, then 8080–8099 sweep.
+    # PID file, recorded port, then 8080–8099 sweep (match by path under this folder).
     stop = '''@echo off
 setlocal EnableExtensions
 set "PIDFILE=%TEMP%\\avatar-combiner-web.pid"
 set "PORTFILE=%TEMP%\\avatar-combiner-web.port"
+set "APPDIR=%~dp0"
 echo Stopping Avatar Combiner web UI...
 if exist "%PIDFILE%" (
   set /p APP_PID=<"%PIDFILE%"
@@ -114,13 +137,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$port=%PORT%; $conns=Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue; foreach ($c in $conns) { try { Stop-Process -Id $c.OwningProcess -Force -EA Stop; Write-Output ('Killed PID '+$c.OwningProcess+' on port '+$port); } catch {} }" 2>nul
 if exist "%PORTFILE%" del "%PORTFILE%" >nul 2>&1
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "8080..8099 | ForEach-Object { Get-NetTCPConnection -LocalPort $_ -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if ($proc -and ($proc.ProcessName -match 'python|uv|аватар|avatar')) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$_) } } }" 2>nul
+  "$dir=$env:APPDIR; if (-not $dir) { $dir='%~dp0' }; 8080..8099 | ForEach-Object { $port=$_; Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if (-not $proc) { return }; $path=''; try { $path=$proc.Path } catch {}; if ($proc.ProcessName -match 'python|uv|avatar' -or ($path -and $dir -and $path.StartsWith($dir))) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$port) } } }" 2>nul
 echo Done.
 pause
 endlocal
 '''
-    (dist_dir / 'start-web.bat').write_text(start, encoding='utf-8')
-    (dist_dir / 'stop-web.bat').write_text(stop, encoding='utf-8')
+    # Write as UTF-8 with BOM so editors keep ASCII body; cmd still sees ASCII opcodes.
+    (dist_dir / 'start-web.bat').write_text(start, encoding='utf-8-sig')
+    (dist_dir / 'stop-web.bat').write_text(stop, encoding='utf-8-sig')
 
     # Ship icon + shortcut helpers beside the exe for lab desktops.
     icon_src = SCRIPT_DIR / 'assets' / 'app-icon.ico'
