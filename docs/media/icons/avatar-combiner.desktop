@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Avatar Combiner
+Name[ru]=Аватар — объединитель планшетов
+GenericName=Plate combiner web UI
+Comment=Combine four 96-well plates into one 384-well layout
+Comment[ru]=Объединение четырёх 96-луночных планшетов в один 384
+# Point Icon= at an absolute path after install, e.g.:
+#   Icon=/opt/avatar-combiner/app-icon-256.png
+# or copy app-icon-256.png / app-icon-512.png into hicolor:
+#   ~/.local/share/icons/hicolor/256x256/apps/avatar-combiner.png
+Icon=avatar-combiner
+TryExec=python3
+# Dev checkout: run the web launcher from the repo root.
+# Adjust Exec= to your install path, or to the packaged binary:
+#   Exec=/opt/avatar-combiner/avatar_combiner --web --port 8080
+Exec=python3 src/launch_web_windows.py --port 8080
+Path=
+Terminal=false
+Categories=Science;Biology;Education;
+StartupNotify=true
+Keywords=PCR;plates;384;primer;

@@ -213,17 +213,23 @@ def test_tools_hub_lists_all_groups(tmp_path):
     assert 'INSPECT' in text
     assert 'STRUCTURE' in text
     assert 'FILES' in text
-    for key in ('[5]', '[6]', '[7]', '[8]'):
+    for key in ('[5]', '[6]', '[7]', '[8]', '[9]'):
         assert key in text
 
 
 def test_tools_hub_dispatches_new_keys(tmp_path, monkeypatch):
     app = make_app(tmp_path, lang='en')
     calls = []
-    for name in ('tool_structure', 'tool_layout', 'tool_pcr', 'tool_xlsx'):
+    for name in (
+        'tool_structure',
+        'tool_layout',
+        'tool_pcr',
+        'tool_xlsx',
+        'tool_gradient',
+    ):
         monkeypatch.setattr(app, name, lambda name=name: calls.append(name))
 
-    for key in '5678':
+    for key in '56789':
         app.handle_tools_key(key)
 
     assert calls == [
@@ -231,6 +237,7 @@ def test_tools_hub_dispatches_new_keys(tmp_path, monkeypatch):
         'tool_layout',
         'tool_pcr',
         'tool_xlsx',
+        'tool_gradient',
     ]
 
 
