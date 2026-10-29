@@ -347,6 +347,18 @@ def column_letter(number):
     return letters
 
 
+def terminal_geometry(fallback=(80, 24)):
+    """Return the live console size for layout.
+
+    Paint exactly this many columns: the TUI advances rows by filling each
+    line to the terminal width (no embedded newlines). A hard min/max width
+    previously forced wrapping on narrow consoles and left dead space on wide
+    ones; resize must re-query this every frame.
+    """
+    cols, rows = shutil.get_terminal_size(fallback)
+    return max(24, int(cols)), max(8, int(rows))
+
+
 class Terminal:
     """Raw single-key reader for POSIX and Windows consoles."""
 
@@ -368,12 +380,18 @@ class Terminal:
 
             termios.tcsetattr(self._fd, termios.TCSADRAIN, self._old)
 
-    def read_key(self):
+    def read_key(self, timeout=None):
+        """Read one key. If ``timeout`` (seconds) is set and nothing arrives, return ``None``."""
         if os.name == 'nt':
-            return self._read_windows()
-        return self._read_posix()
+            return self._read_windows(timeout=timeout)
+        return self._read_posix(timeout=timeout)
 
-    def _read_posix(self):
+    def _read_posix(self, timeout=None):
+        if timeout is not None:
+            ready, _, _ = select.select([self._fd], [], [], timeout)
+            if not ready:
+                return None
+
         first = os.read(self._fd, 1)
         if not first:
             return 'QUIT'
@@ -410,8 +428,17 @@ class Terminal:
         except UnicodeDecodeError:
             return ''
 
-    def _read_windows(self):
+    def _read_windows(self, timeout=None):
         import msvcrt
+
+        if timeout is not None:
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                if msvcrt.kbhit():
+                    break
+                time.sleep(0.02)
+            else:
+                return None
 
         char = msvcrt.getwch()
         if char in ('\x00', '\xe0'):
@@ -496,17 +523,27 @@ class App:
             with Terminal() as terminal:
                 self.term = terminal
                 sys.stdout.write('\x1b[?1049h\x1b[?25l\x1b[2J')
+                dirty = True
+                last_size = None
                 while self.screen != 'quit':
-                    self.draw()
-                    self.handle_key(terminal.read_key())
+                    size = terminal_geometry()
+                    if size != last_size:
+                        last_size = size
+                        dirty = True
+                    if dirty:
+                        self.draw()
+                        dirty = False
+                    key = terminal.read_key(timeout=0.2)
+                    if key is None:
+                        continue
+                    self.handle_key(key)
+                    dirty = True
         finally:
             sys.stdout.write(f'{RESET}\x1b[?25h\x1b[?1049l')
             sys.stdout.flush()
 
     def draw(self):
-        width, height = shutil.get_terminal_size((100, 30))
-        width = max(60, min(width, 118))
-        height = max(20, height)
+        width, height = terminal_geometry()
         self.paint_lines(self.render_screen(width, height), width, height)
 
     def paint_lines(self, lines, width, height):
@@ -817,9 +854,7 @@ class App:
     def prompt_text(self, title, hint=None, max_length=120):
         value = ''
         while True:
-            width, height = shutil.get_terminal_size((100, 30))
-            width = max(60, min(width, 118))
-            height = max(20, height)
+            width, height = terminal_geometry()
 
             lines = self.header(width)
             lines.append('')
@@ -834,7 +869,9 @@ class App:
             )
             self.paint_lines(lines, width, height)
 
-            key = self.term.read_key()
+            key = self.term.read_key(timeout=0.2)
+            if key is None:
+                continue
             if key in ('ESC', 'CTRL_C'):
                 return None
             if key == 'ENTER':
