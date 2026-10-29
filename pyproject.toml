@@ -4,6 +4,15 @@ version = "0.2.0"
 description = "Объединение четырёх 96-луночных планшетов в один 384-луночный планшет"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "CC-BY-4.0"
+license-files = ["LICENSE"]
+keywords = ["pcr", "plate", "384-well", "laboratory", "bio-rad"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "biopython>=1.87,<2",
     "pint>=0.24.4,<1",
@@ -16,6 +25,9 @@ dependencies = [
     "nicegui>=3.18.0,<4",
 ]
 
+[project.urls]
+Repository = "https://github.com/Stathmin/avatar-combiner"
+
 [dependency-groups]
 dev = [
     "playwright>=1.64.0",
@@ -23,9 +35,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.5",
 ]
-build = [
-    "pyinstaller>=5.0",
-]
+build = ["pyinstaller>=5.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
