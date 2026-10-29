@@ -29,6 +29,15 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def launch_chromium(playwright):
+    """Launch Chromium: Playwright default, or PLAYWRIGHT_CHROMIUM_EXECUTABLE."""
+    kwargs = {'headless': True, 'args': ['--no-sandbox']}
+    executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
+    if executable:
+        kwargs['executable_path'] = executable
+    return playwright.chromium.launch(**kwargs)
+
+
 def free_port():
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
@@ -135,11 +144,7 @@ def running_web(base: Path):
 @pytest.fixture(scope='session')
 def browser():
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path='/usr/bin/chromium',
-            headless=True,
-            args=['--no-sandbox'],
-        )
+        browser = launch_chromium(playwright)
         yield browser
         browser.close()
 

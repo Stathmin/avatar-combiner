@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Avatar Combiner application icon  original four-nations parody mark.
+  Palette matches plate accents: Earth #4f9a28, Water #1e6fb3, Air #16a487, Fire #ab1610.
+  Suitable as an OS app icon (not the tiny sidebar glyph).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Avatar Combiner">
+  <defs>
+    <clipPath id="mask">
+      <rect x="16" y="16" width="480" height="480" rx="96"/>
+    </clipPath>
+  </defs>
+
+  <!-- Soft paper pad behind the mark -->
+  <rect x="0" y="0" width="512" height="512" rx="108" fill="#f3ebe0"/>
+
+  <g clip-path="url(#mask)">
+    <!-- Earth (TL) -->
+    <rect x="16" y="16" width="236" height="236" fill="#4f9a28"/>
+    <!-- Water (TR) -->
+    <rect x="260" y="16" width="236" height="236" fill="#1e6fb3"/>
+    <!-- Air (BL) -->
+    <rect x="16" y="260" width="236" height="236" fill="#16a487"/>
+    <!-- Fire (BR) -->
+    <rect x="260" y="260" width="236" height="236" fill="#ab1610"/>
+
+    <!-- Cross gap (united nations grid) -->
+    <rect x="244" y="16" width="24" height="480" fill="#f3ebe0"/>
+    <rect x="16" y="244" width="480" height="24" fill="#f3ebe0"/>
+  </g>
+
+  <!-- Outer stroke -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#2a211a" stroke-opacity="0.28" stroke-width="10"/>
+
+  <!-- Earth emblem: mountain gate (cream outline) -->
+  <g fill="none" stroke="#f3f7ea" stroke-width="18" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M86 198 L134 98 L182 198"/>
+    <path d="M102 198 H166"/>
+    <path d="M134 142 V198"/>
+  </g>
+
+  <!-- Water emblem: crescent moon + waves -->
+  <g fill="none" stroke="#eaf4fc" stroke-width="16" stroke-linecap="round">
+    <path d="M338 92 a52 52 0 0 0 72 52"/>
+    <path d="M308 168 c24-28 56-28 80 0"/>
+    <path d="M308 198 c24-28 56-28 80 0"/>
+    <path d="M308 228 c24-28 56-28 80 0"/>
+  </g>
+
+  <!-- Air emblem: three interlocking swirl rings -->
+  <g fill="none" stroke="#e7fffa" stroke-width="15">
+    <circle cx="102" cy="348" r="36"/>
+    <circle cx="166" cy="348" r="36"/>
+    <circle cx="134" cy="404" r="36"/>
+  </g>
+
+  <!-- Fire emblem: stylized flame -->
+  <path d="M378 456
+           C372 404 398 380 406 336
+           C430 368 456 392 456 430
+           C456 462 432 480 406 480
+           C382 480 378 464 378 456 Z"
+        fill="#f6e7a4"/>
+  <path d="M406 456
+           C404 430 416 416 420 396
+           C430 412 442 424 442 444
+           C442 460 426 468 406 456 Z"
+        fill="#ab1610" fill-opacity="0.35"/>
+</svg>

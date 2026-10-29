@@ -73,6 +73,74 @@ def collect_local_modules(entry='run_pipeline.py'):
     return sorted(seen)
 
 
+def _write_dist_web_bats(dist_dir: Path, exe_name: str) -> None:
+    """Drop double-click start/stop helpers next to the packaged exe.
+
+    A second PyInstaller target is unnecessary: the main exe already accepts
+    ``--web``. Bats keep start/stop obvious for non-dev Windows users.
+    Also copies the app icon and shortcut helpers so lab users can pin .lnk
+    files with the four-nations mark (``.bat`` files cannot embed icons).
+    """
+    dist_dir.mkdir(parents=True, exist_ok=True)
+    start = f'''@echo off
+REM Start the packaged Avatar Combiner web UI in the default browser.
+setlocal
+cd /d "%~dp0"
+title Avatar Combiner — Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
+set "PORT=8080"
+set "EXE=%~dp0{exe_name}"
+echo %PORT%> "%TEMP%\\avatar-combiner-web.port"
+echo Starting "%EXE%" --web --port %PORT%
+echo Open http://127.0.0.1:%PORT%  (browser should open shortly)
+echo Stop: close this window, Ctrl+C, or run stop-web.bat
+start "" /b powershell -NoProfile -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:%PORT%'"
+"%EXE%" --web --port %PORT% --no-browser
+endlocal
+'''
+    # Match repo-root stop-web.bat: PID file, recorded port, then 8080–8099 sweep.
+    stop = '''@echo off
+setlocal EnableExtensions
+set "PIDFILE=%TEMP%\\avatar-combiner-web.pid"
+set "PORTFILE=%TEMP%\\avatar-combiner-web.port"
+echo Stopping Avatar Combiner web UI...
+if exist "%PIDFILE%" (
+  set /p APP_PID=<"%PIDFILE%"
+  if defined APP_PID taskkill /PID %APP_PID% /T /F >nul 2>&1
+  del "%PIDFILE%" >nul 2>&1
+)
+set "PORT=8080"
+if exist "%PORTFILE%" set /p PORT=<"%PORTFILE%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$port=%PORT%; $conns=Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue; foreach ($c in $conns) { try { Stop-Process -Id $c.OwningProcess -Force -EA Stop; Write-Output ('Killed PID '+$c.OwningProcess+' on port '+$port); } catch {} }" 2>nul
+if exist "%PORTFILE%" del "%PORTFILE%" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "8080..8099 | ForEach-Object { Get-NetTCPConnection -LocalPort $_ -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if ($proc -and ($proc.ProcessName -match 'python|uv|аватар|avatar')) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$_) } } }" 2>nul
+echo Done.
+pause
+endlocal
+'''
+    (dist_dir / 'start-web.bat').write_text(start, encoding='utf-8')
+    (dist_dir / 'stop-web.bat').write_text(stop, encoding='utf-8')
+
+    # Ship icon + shortcut helpers beside the exe for lab desktops.
+    icon_src = SCRIPT_DIR / 'assets' / 'app-icon.ico'
+    if icon_src.is_file():
+        shutil.copy2(icon_src, dist_dir / 'app-icon.ico')
+    for name in ('create-shortcuts.ps1', 'create-shortcuts.bat'):
+        helper = SCRIPT_DIR.parent / name
+        if not helper.is_file():
+            helper = SCRIPT_DIR / name
+        if helper.is_file():
+            shutil.copy2(helper, dist_dir / name)
+
+    # Also drop plate-fold GIF beside the exe (resolve_plate_fold_gif first look).
+    gif_src = SCRIPT_DIR.parent / 'docs' / 'media' / 'four-to-384.gif'
+    if gif_src.is_file():
+        media_dir = dist_dir / 'media'
+        media_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(gif_src, media_dir / 'four-to-384.gif')
+
+
 def build_binary():
     """Собирает исполняемый файл."""
     system = platform.system()
@@ -88,12 +156,22 @@ def build_binary():
         exe_name = 'аватар_объединитель_4х_планшетов'
     else:
         exe_name = 'avatar_combiner'
-    icon = None
-    
+    # Four-nations app icon (Windows .ico; Linux PNG via --icon also accepted).
+    icon_candidates = [
+        SCRIPT_DIR / 'assets' / 'app-icon.ico',
+        SCRIPT_DIR / 'assets' / 'app-icon-256.png',
+        SCRIPT_DIR.parents[0] / 'docs' / 'media' / 'icons' / 'app-icon.ico',
+    ]
+    icon = next((str(p) for p in icon_candidates if p.is_file()), None)
+
     print(f"\n{'='*60}")
     print(f"Сборка исполняемого файла для {system}")
     print(f"{'='*60}\n")
-    
+    if icon:
+        print(f"✓ App icon: {icon}")
+    else:
+        print("App icon not found under src/assets/; building without --icon")
+
     # Команда PyInstaller
     cmd = [
         sys.executable, '-m', 'PyInstaller',
@@ -180,11 +258,21 @@ def build_binary():
 
     if system != 'Windows':
         cmd.insert(-1, '--strip')
-    
-    # Добавляем иконку для Windows, если указана
+
+    # Embed app icon in the Windows exe (and Linux binary when PNG/ICO present).
     if icon and os.path.exists(icon):
         cmd[-1:-1] = ['--icon', icon]
-    
+
+    # Bundle plate-fold GIF so frozen web UI can serve it from _MEIPASS/media/
+    # (see internal/pipeline-gif-placement.md). Windows uses ';' as --add-data sep.
+    gif_src = SCRIPT_DIR.parent / 'docs' / 'media' / 'four-to-384.gif'
+    if gif_src.is_file():
+        sep = ';' if system == 'Windows' else ':'
+        cmd[-1:-1] = ['--add-data', f'{gif_src}{sep}media']
+        print(f"✓ Plate-fold GIF: {gif_src} → media/")
+    else:
+        print(f"Plate-fold GIF not found at {gif_src}; web Quick-start GIF may be missing in exe")
+
     try:
         print("Запуск PyInstaller...")
         subprocess.check_call(cmd)
@@ -197,10 +285,14 @@ def build_binary():
         
         if os.path.exists(output_path):
             size_mb = os.path.getsize(output_path) / (1024 * 1024)
+            # Companion bats so lab users can start/stop --web without a second exe.
+            dist_dir = Path(output_path).resolve().parent
+            _write_dist_web_bats(dist_dir, Path(output_path).name)
             print(f"\n{'='*60}")
             print("✓ Сборка завершена успешно!")
             print(f"  Исполняемый файл: {output_path}")
             print(f"  Размер: {size_mb:.2f} MB")
+            print(f"  Веб: {dist_dir / 'start-web.bat'} / {dist_dir / 'stop-web.bat'}")
             print(f"{'='*60}\n")
             return True
         else:

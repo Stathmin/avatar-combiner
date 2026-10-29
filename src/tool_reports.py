@@ -78,6 +78,11 @@ def layout_rows(report):
     ]
 
 
+def gradient_rows(report):
+    """Row letters stay A–H (not translated); values are °C to one decimal."""
+    return [(letter, f'{temp:.1f}') for letter, temp in report.rows]
+
+
 def unit_rows(text, target_unit=None):
     return [
         (unit, format_number(amount))

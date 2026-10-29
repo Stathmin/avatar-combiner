@@ -46,53 +46,111 @@ def convert_row_interleaved(old_row, plate_num, column):
     return new_rows[new_index]
 
 
+def _empty_plate_rows():
+    rows_96 = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    return [
+        {'id': '', 'row': row, 'column': column}
+        for row in rows_96
+        for column in range(1, 13)
+    ]
+
+
+def _complete_plate_rows(rows):
+    """Fill any missing A1–H12 wells with blank ids (preserves sparse CSVs)."""
+    by_well = {}
+    for row in rows:
+        key = (row['row'], int(row['column']))
+        by_well[key] = row
+    completed = []
+    for row_label, column in (
+        (row, column)
+        for row in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        for column in range(1, 13)
+    ):
+        existing = by_well.get((row_label, column))
+        if existing is not None:
+            completed.append(existing)
+        else:
+            completed.append({'id': '', 'row': row_label, 'column': column})
+    return completed
+
+
+def _read_plate_rows(input_file):
+    """Read plate CSV rows; missing file → 96 blank wells (sparse-plate pad)."""
+    path = Path(input_file)
+    if not path.is_file():
+        return _empty_plate_rows(), path.stem
+    with open(path, 'r', encoding='utf-8') as handle:
+        reader = csv.DictReader(handle)
+        rows = []
+        for row in reader:
+            if 'id' not in row or 'row' not in row or 'column' not in row:
+                raise KeyError(
+                    f"missing column in '{path.name}' "
+                    f"(need id, row, column)"
+                )
+            sample_id = '' if row['id'] is None else str(row['id'])
+            if sample_id.strip().lower() in ('nan', 'none'):
+                sample_id = ''
+            rows.append(
+                {
+                    'id': sample_id,
+                    'row': str(row['row']).strip().upper(),
+                    'column': int(row['column']),
+                }
+            )
+    return _complete_plate_rows(rows), path.stem
+
+
 def combine_plates(input_files, output_file, log=print):
     """
-    Объединяет 4 планшета в один 384-луночный с чередованием по строкам.
+    Объединяет до 4 планшетов в один 384-луночный с чередованием по строкам.
+
+    Missing plate CSVs are treated as empty 96-well plates so unselected
+    slots stay blank in the 384 layout. Blank/NaN sample ids stay empty.
     
     Args:
-        input_files: список путей к входным CSV файлам
+        input_files: список путей к входным CSV файлам (1–4; pad to 4 slots)
         output_file: путь к выходному CSV файлу
     """
     all_samples = []
-    
-    for plate_num, input_file in enumerate(input_files, start=1):
-        # Получаем ID планшета из имени файла
-        plate_id = os.path.splitext(os.path.basename(input_file))[0]
-        
-        # Определяем смещение для столбцов
+    files = list(input_files)
+    while len(files) < 4:
+        files.append(None)
+
+    for plate_num, input_file in enumerate(files[:4], start=1):
+        if input_file is None:
+            plate_rows, plate_id = _empty_plate_rows(), f'plate{plate_num}'
+            log(f'{plate_id}: padded empty slot')
+        else:
+            try:
+                plate_rows, plate_id = _read_plate_rows(input_file)
+            except KeyError as exc:
+                raise ValueError(str(exc)) from exc
+            if not Path(input_file).is_file():
+                log(f'{plate_id}: padded empty slot (file missing)')
+
         if plate_num in [1, 2]:
             column_offset = 0  # Колонки 1-12
         else:  # plate_num in [3, 4]
             column_offset = 12  # Колонки 13-24
-        
-        # Читаем данные планшета
-        try:
-            with open(input_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    sample_id = row['id']
-                    old_row = row['row']
-                    old_column = int(row['column'])
-                    
-                    # Преобразуем координаты
-                    new_row = convert_row_interleaved(old_row, plate_num, old_column)
-                    new_column = old_column + column_offset
-                    
-                    all_samples.append({
-                        'id': sample_id,
-                        'название_старого_планшета': plate_id,
-                        'строка_в_старом': old_row,
-                        'столбец_в_старом': old_column,
-                        'строка_в_новом': new_row,
-                        'столбец_в_новом': new_column
-                    })
-        except FileNotFoundError:
-            print(f"Ошибка: файл '{input_file}' не найден.", file=sys.stderr)
-            sys.exit(1)
-        except KeyError as e:
-            print(f"Ошибка: отсутствует колонка в файле '{input_file}': {e}", file=sys.stderr)
-            sys.exit(1)
+
+        for row in plate_rows:
+            sample_id = row['id']
+            old_row = row['row']
+            old_column = int(row['column'])
+
+            new_row = convert_row_interleaved(old_row, plate_num, old_column)
+            new_column = old_column + column_offset
+
+            all_samples.append({
+                'id': sample_id,
+                'название_старого_планшета': plate_id,
+                'строка_в_старом': old_row,
+                'столбец_в_старом': old_column,
+                'строка_в_новом': new_row,
+                'столбец_в_новом': new_column
+            })
     
     # Сортируем по (строка_в_новом, столбец_в_новом)
     rows_384 = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
@@ -207,17 +265,14 @@ def main(output_dir=None, input_dir=None, log=print):
     input_dir = Path(input_dir) if input_dir else output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Стандартные имена файлов
+    # Standard slots plate1–plate4; missing files pad as empty wells.
     input_files = [input_dir / f'plate{number}.csv' for number in range(1, 5)]
     output_file = output_dir / 'combined_384_plate.csv'
-    
-    # Проверка наличия входных файлов
-    missing_files = [str(f) for f in input_files if not f.exists()]
-    if missing_files:
-        print(f"Ошибка: следующие файлы не найдены: {', '.join(missing_files)}", file=sys.stderr)
-        print("Сначала запустите generate_test_plates.py для создания тестовых данных.", file=sys.stderr)
-        sys.exit(1)
-    
+    if not any(path.exists() for path in input_files):
+        raise FileNotFoundError(
+            f'no plate CSV files in {input_dir} (need at least plate1.csv)'
+        )
+
     combine_plates(input_files, output_file, log=log)
     
     # Создаём пивот-таблицу
