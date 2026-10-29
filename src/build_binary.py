@@ -80,28 +80,53 @@ def _write_dist_web_bats(dist_dir: Path, exe_name: str) -> None:
     ``--web``. Bats keep start/stop obvious for non-dev Windows users.
     Also copies the app icon and shortcut helpers so lab users can pin .lnk
     files with the four-nations mark (``.bat`` files cannot embed icons).
+
+    Important: keep bat bodies ASCII-only. ``cmd.exe`` reads ``.bat`` files in
+    the OEM/ANSI code page, so a UTF-8 Cyrillic exe name embedded in the bat
+    becomes mojibake and fails with "is not recognized as an internal or
+    external command" even though double-clicking the ``.exe`` works. Resolve
+    the exe via ``*.exe`` glob instead (``exe_name`` is kept for callers /
+    logging only).
     """
+    del exe_name  # name is Cyrillic; do not embed it in the .bat text
     dist_dir.mkdir(parents=True, exist_ok=True)
-    start = f'''@echo off
+    # ASCII-only templates — do not put non-ASCII in these strings.
+    start = '''@echo off
 REM Start the packaged Avatar Combiner web UI in the default browser.
-setlocal
+REM Finds the .exe beside this bat (avoids cmd code-page issues with Cyrillic names).
+setlocal EnableExtensions
 cd /d "%~dp0"
-title Avatar Combiner — Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
-set "PORT=8080"
-set "EXE=%~dp0{exe_name}"
+title Avatar Combiner - Web UI  [close this window / Ctrl+C / stop-web.bat to stop]
+set "EXE="
+for %%F in ("%~dp0*.exe") do set "EXE=%%~fF"
+if not defined EXE (
+  echo [error] No .exe found in "%~dp0"
+  pause
+  exit /b 1
+)
+if not exist "%EXE%" (
+  echo [error] Missing exe: %EXE%
+  pause
+  exit /b 1
+)
+set "PORT="
+for /f %%P in ('powershell -NoProfile -Command "for($p=8080;$p -lt 8100;$p++){try{$l=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$p);$l.Start();$l.Stop();Write-Output $p;break}catch{}}"') do set "PORT=%%P"
+if not defined PORT set "PORT=8080"
 echo %PORT%> "%TEMP%\\avatar-combiner-web.port"
-echo Starting "%EXE%" --web --port %PORT%
+echo Starting web UI on port %PORT%
+echo Exe: %EXE%
 echo Open http://127.0.0.1:%PORT%  (browser should open shortly)
 echo Stop: close this window, Ctrl+C, or run stop-web.bat
 start "" /b powershell -NoProfile -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:%PORT%'"
 "%EXE%" --web --port %PORT% --no-browser
 endlocal
 '''
-    # Match repo-root stop-web.bat: PID file, recorded port, then 8080–8099 sweep.
+    # PID file, recorded port, then 8080–8099 sweep (match by path under this folder).
     stop = '''@echo off
 setlocal EnableExtensions
 set "PIDFILE=%TEMP%\\avatar-combiner-web.pid"
 set "PORTFILE=%TEMP%\\avatar-combiner-web.port"
+set "APPDIR=%~dp0"
 echo Stopping Avatar Combiner web UI...
 if exist "%PIDFILE%" (
   set /p APP_PID=<"%PIDFILE%"
@@ -114,13 +139,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$port=%PORT%; $conns=Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue; foreach ($c in $conns) { try { Stop-Process -Id $c.OwningProcess -Force -EA Stop; Write-Output ('Killed PID '+$c.OwningProcess+' on port '+$port); } catch {} }" 2>nul
 if exist "%PORTFILE%" del "%PORTFILE%" >nul 2>&1
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "8080..8099 | ForEach-Object { Get-NetTCPConnection -LocalPort $_ -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if ($proc -and ($proc.ProcessName -match 'python|uv|аватар|avatar')) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$_) } } }" 2>nul
+  "$dir=$env:APPDIR; if (-not $dir) { $dir='%~dp0' }; 8080..8099 | ForEach-Object { $port=$_; Get-NetTCPConnection -LocalPort $port -State Listen -EA SilentlyContinue | ForEach-Object { $proc=Get-Process -Id $_.OwningProcess -EA SilentlyContinue; if (-not $proc) { return }; $path=''; try { $path=$proc.Path } catch {}; if ($proc.ProcessName -match 'python|uv|avatar' -or ($path -and $dir -and $path.StartsWith($dir))) { Stop-Process -Id $proc.Id -Force -EA SilentlyContinue; Write-Output ('Killed '+$proc.ProcessName+' PID '+$proc.Id+' on port '+$port) } } }" 2>nul
 echo Done.
 pause
 endlocal
 '''
-    (dist_dir / 'start-web.bat').write_text(start, encoding='utf-8')
-    (dist_dir / 'stop-web.bat').write_text(stop, encoding='utf-8')
+    # Pure ASCII + CRLF, no BOM. UTF-16 bats make cmd run "R" from "REM"
+    # (launches R.exe); LF-only is fragile; BOM confuses older cmd.
+    def _bat_bytes(text: str) -> bytes:
+        return text.replace('\r\n', '\n').replace('\n', '\r\n').encode('ascii')
+
+    (dist_dir / 'start-web.bat').write_bytes(_bat_bytes(start))
+    (dist_dir / 'stop-web.bat').write_bytes(_bat_bytes(stop))
 
     # Ship icon + shortcut helpers beside the exe for lab desktops.
     icon_src = SCRIPT_DIR / 'assets' / 'app-icon.ico'
@@ -132,6 +162,29 @@ endlocal
             helper = SCRIPT_DIR / name
         if helper.is_file():
             shutil.copy2(helper, dist_dir / name)
+
+    # Absolute-path .lnk files (required for icons + correct working dir on Windows).
+    # After unzip on another PC, user must run create-shortcuts.bat once.
+    helper_ps1 = dist_dir / 'create-shortcuts.ps1'
+    if helper_ps1.is_file() and (dist_dir / 'app-icon.ico').is_file():
+        try:
+            subprocess.run(
+                [
+                    'powershell',
+                    '-NoProfile',
+                    '-ExecutionPolicy',
+                    'Bypass',
+                    '-File',
+                    str(helper_ps1),
+                    '-TargetDir',
+                    str(dist_dir),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            pass
 
     # Also drop plate-fold GIF beside the exe (resolve_plate_fold_gif first look).
     gif_src = SCRIPT_DIR.parent / 'docs' / 'media' / 'four-to-384.gif'
